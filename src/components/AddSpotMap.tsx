@@ -6,7 +6,7 @@ import { useMapLiveWinds }                          from '../hooks/useMapLiveWin
 import { windRating, ratingColor }                  from '../types'
 import type { Spot }                                from '../types'
 
-const GMAP_KEY = 'AIzaSyBl2RUxrzYi3vRhlNf7O3S_asndmMQsIj0'
+const GMAP_KEY = import.meta.env.VITE_GMAP_KEY || 'AIzaSyBl2RUxrzYi3vRhlNf7O3S_asndmMQsIj0'
 
 // ISO country code → full name for search
 const COUNTRY_NAMES: Record<string, string> = {

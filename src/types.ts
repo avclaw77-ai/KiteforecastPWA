@@ -22,7 +22,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   speedUnit:     'kts',
   heightUnit:    'm',
   tempUnit:      '°C',
-  stormGlassKey: 'c30e28ee-11a9-11f1-a997-0242ac120004-c30e2998-11a9-11f1-a997-0242ac120004',
+  stormGlassKey: import.meta.env?.VITE_STORMGLASS_KEY || '',
 }
 
 // ── Unit conversion helpers ──────────────────────────────────────────────────
