@@ -1,59 +1,36 @@
-const CACHE_NAME = 'kiteforecast-v1'
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-]
+const CACHE_NAME = 'kiteforecast-v3'
 
-// Install: cache static shell
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-  )
-  self.skipWaiting()
-})
+// Install: activate immediately
+self.addEventListener('install', () => self.skipWaiting())
 
-// Activate: clean old caches
+// Activate: purge ALL old caches, claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   )
-  self.clients.claim()
 })
 
-// Fetch: network-first for API calls, cache-first for static assets
+// Fetch: ALWAYS network-first, cache is only for offline fallback
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return
+
   const url = new URL(event.request.url)
 
-  // API calls — network only (weather data should be fresh)
-  if (url.hostname.includes('open-meteo.com') ||
-      url.hostname.includes('stormglass.io') ||
-      url.hostname.includes('googleapis.com')) {
-    event.respondWith(fetch(event.request))
-    return
-  }
+  // Don't cache external API calls at all
+  if (url.origin !== self.location.origin) return
 
-  // Static assets — cache-first with network fallback
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached
-      return fetch(event.request).then(response => {
-        // Cache successful responses for same-origin requests
-        if (response.ok && url.origin === self.location.origin) {
+    fetch(event.request)
+      .then(response => {
+        // Cache a copy for offline use
+        if (response.ok) {
           const clone = response.clone()
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone))
+          caches.open(CACHE_NAME).then(c => c.put(event.request, clone))
         }
         return response
       })
-    }).catch(() => {
-      // Offline fallback for navigation
-      if (event.request.mode === 'navigate') {
-        return caches.match('/index.html')
-      }
-    })
+      .catch(() => caches.match(event.request))
   )
 })

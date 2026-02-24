@@ -24,17 +24,49 @@ body { background: var(--bg); }
 /* ── Title bar ───────────────────────────────────────────────────────────────── */
 .titlebar {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
   user-select: none;
   flex-shrink: 0;
 }
-.titlebar-traffic-light-spacer { width: 8px; flex-shrink: 0; }
-.titlebar-title    { font-size: 13px; font-weight: 600; }
+.titlebar-traffic-light-spacer { width: 8px; flex-shrink: 0; display: none; }
+
+/* Row 1: brand + settings */
+.titlebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 6px;
+}
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.titlebar-logo {
+  font-size: 18px;
+  line-height: 1;
+}
+.titlebar-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Row 2: model pills */
+.titlebar-models {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .titlebar-subtitle { font-size: 11px; color: var(--muted); }
 .titlebar-nav      { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .titlebar-divider  { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
@@ -502,10 +534,12 @@ body { background: var(--bg); }
   /* Hide traffic-light spacer on non-Electron */
   .titlebar-traffic-light-spacer { display: none; }
 
-  /* Titlebar: compact */
-  .titlebar { padding: 8px 12px; gap: 6px; }
-  .titlebar-title { font-size: 12px; }
-  .model-btn { padding: 3px 7px; font-size: 10px; }
+  /* Titlebar: compact mobile */
+  .titlebar-top { padding: 8px 12px 4px; }
+  .titlebar-title { font-size: 14px; }
+  .titlebar-logo { font-size: 16px; }
+  .titlebar-models { padding: 0 12px 8px; gap: 5px; }
+  .model-btn { padding: 3px 8px; font-size: 10px; }
 
   /* Layout: vertical stack instead of sidebar + main */
   .flex.flex-1.overflow-hidden {
@@ -621,8 +655,9 @@ body { background: var(--bg); }
 
 /* Tiny screens (iPhone SE, etc) */
 @media (max-width: 400px) {
-  .titlebar-title { font-size: 11px; }
-  .model-btn { padding: 2px 5px; font-size: 9px; }
+  .titlebar-title { font-size: 13px; }
+  .titlebar-logo { font-size: 14px; }
+  .model-btn { padding: 2px 6px; font-size: 9px; }
   .sidebar { max-height: 48px; }
   .day-card { min-width: 80px; }
   .view-toggle-btn { padding: 4px 10px; font-size: 10px; }

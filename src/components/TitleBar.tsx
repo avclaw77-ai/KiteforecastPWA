@@ -21,9 +21,19 @@ export function TitleBar({
     <header className="titlebar">
       <div className="titlebar-traffic-light-spacer" />
 
-      <span className="titlebar-title">KiteForecast</span>
+      {/* Row 1: Brand + settings */}
+      <div className="titlebar-top">
+        <div className="titlebar-brand">
+          <span className="titlebar-logo">🪁</span>
+          <span className="titlebar-title">KiteForecast</span>
+        </div>
+        <button className="settings-btn no-drag" onClick={onSettingsClick}>
+          ⚙
+        </button>
+      </div>
 
-      <nav className="titlebar-nav no-drag">
+      {/* Row 2: Model selector */}
+      <nav className="titlebar-models no-drag">
         {visibleModels.map(m => {
           const isBlend  = m === 'BLEND'
           const isActive = model === m
@@ -42,12 +52,6 @@ export function TitleBar({
             </button>
           )
         })}
-
-        <div className="titlebar-divider" />
-
-        <button className="settings-btn" onClick={onSettingsClick}>
-          ⚙
-        </button>
       </nav>
     </header>
   )

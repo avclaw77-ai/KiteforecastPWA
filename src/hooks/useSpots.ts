@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { KNOWN_SPOTS } from '../data/knownSpots'
 import type { Spot } from '../types'
 
-const DEFAULT_IDS = ['k1', 'k2', 'k3', 'k4', 'k5']
+const DEFAULT_IDS = ['k27', 'k2']
 const STORAGE_KEY = 'kiteforecast-spots'
 
 function getDefaultSpots(): Spot[] {
