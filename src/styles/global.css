@@ -556,19 +556,49 @@ body { background: var(--bg); }
   .section { padding: 12px; }
   .section-header { padding: 0 0 8px 0; }
 
-  /* Day cards: horizontal scroll */
-  .day-cards {
+  /* ── Day strip: horizontal scroll like spots ────────────────────────────── */
+  .day-strip {
+    display: flex !important;
+    grid-template-columns: none !important;
     overflow-x: auto;
-    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
     gap: 8px;
     padding-bottom: 4px;
+    scroll-snap-type: x proximity;
   }
-  .day-card { min-width: 70px; flex-shrink: 0; }
+  .day-strip-skeleton {
+    display: flex !important;
+    grid-template-columns: none !important;
+    overflow-x: auto;
+    gap: 8px;
+  }
+  .day-card {
+    min-width: 90px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
 
-  /* Two-col charts: stack vertically */
-  .two-col { flex-direction: column !important; }
+  /* ── Temp + Precip: full width stacked ──────────────────────────────────── */
+  .two-col {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    gap: 12px;
+  }
 
-  /* Modal: full screen on mobile */
+  /* ── View toggle: compact ───────────────────────────────────────────────── */
+  .view-toggle-btn { padding: 5px 12px; font-size: 11px; }
+
+  /* ── Combined view: horizontal scroll on mobile ─────────────────────────── */
+  .combined-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .combined-table {
+    min-width: 500px;
+  }
+
+  /* ── Modal: full screen on mobile ───────────────────────────────────────── */
   .modal, .add-spot-modal, .settings-panel {
     width: 100% !important;
     max-width: 100% !important;
@@ -579,6 +609,14 @@ body { background: var(--bg); }
   .modal-backdrop {
     align-items: stretch !important;
   }
+
+  /* ── Modal header: prevent wrapping ─────────────────────────────────────── */
+  .modal-header {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .modal-title { font-size: 14px; }
+  .modal-subtitle { font-size: 11px; }
 }
 
 /* Tiny screens (iPhone SE, etc) */
@@ -586,5 +624,7 @@ body { background: var(--bg); }
   .titlebar-title { font-size: 11px; }
   .model-btn { padding: 2px 5px; font-size: 9px; }
   .sidebar { max-height: 48px; }
+  .day-card { min-width: 80px; }
+  .view-toggle-btn { padding: 4px 10px; font-size: 10px; }
 }
 

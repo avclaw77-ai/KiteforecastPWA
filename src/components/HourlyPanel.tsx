@@ -205,14 +205,22 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, su, hu }: {
   // Y-axis labels
   const yTicks = [0, Math.round(maxWind / 3), Math.round(maxWind * 2 / 3), Math.round(maxWind)]
 
-  // Hover calculations
-  const handleMouseMove = (e: React.MouseEvent) => {
+  // Hover calculations (mouse + touch)
+  const getPosition = (clientX: number) => {
     const td = chartRef.current
-    if (!td) return
+    if (!td) return null
     const rect = td.getBoundingClientRect()
-    const x = e.clientX - rect.left
+    const x = clientX - rect.left
     const pct = Math.max(0, Math.min(1, x / rect.width))
-    setHover({ x, pct })
+    return { x, pct }
+  }
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const pos = getPosition(e.clientX)
+    if (pos) setHover(pos)
+  }
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const pos = getPosition(e.touches[0].clientX)
+    if (pos) setHover(pos)
   }
 
   // Interpolate value at a fractional position (pct 0..1 across the chart)
@@ -261,7 +269,9 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, su, hu }: {
               <td ref={chartRef} colSpan={N}
                 style={{ padding: 0, height: CHART_H, position: 'relative', cursor: 'crosshair' }}
                 onMouseMove={handleMouseMove}
-                onMouseLeave={() => setHover(null)}>
+                onMouseLeave={() => setHover(null)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={() => setHover(null)}>
                 <svg width="100%" height={CHART_H} style={{ display: 'block' }}
                   preserveAspectRatio="none" viewBox={`0 0 ${SVG_W} ${CHART_H}`}>
                   {/* Grid lines */}
@@ -513,7 +523,7 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, settings }: Props
               className={['view-toggle-btn', viewMode === 'combined' ? 'view-toggle-btn--active' : ''].join(' ')}
               onClick={() => setViewMode('combined')}
             >
-              Combined
+              Combo
             </button>
           </div>
         </div>
