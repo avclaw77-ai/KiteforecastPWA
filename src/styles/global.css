@@ -761,12 +761,19 @@ body { background: var(--bg); }
     height: 100%;
   }
   .modal-backdrop {
-    align-items: stretch !important;
+    align-items: flex-end !important;
   }
   .modal {
-    border-radius: 0;
-    max-height: 100vh;
-    padding-top: max(24px, env(safe-area-inset-top, 24px) + 10px);
+    border-radius: 16px 16px 0 0;
+    max-height: calc(100vh - env(safe-area-inset-top, 20px) - 20px);
+    max-height: calc(100dvh - env(safe-area-inset-top, 20px) - 20px);
+    padding-top: 16px;
+    overflow-y: auto;
+  }
+  .add-spot-modal {
+    border-radius: 16px 16px 0 0;
+    height: calc(100vh - env(safe-area-inset-top, 20px) - 20px);
+    height: calc(100dvh - env(safe-area-inset-top, 20px) - 20px);
   }
 
   /* ── Modal header: prevent wrapping ─────────────────────────────────────── */
