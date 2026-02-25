@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
@@ -30,9 +30,30 @@ interface Props {
   settings:      AppSettings
 }
 
-export function ModelComparison({ spot, settings }: Props) {
+// ── Chart tooltip (defined outside component for stable reference) ───────────
+const ChartTooltip = memo(function ChartTooltip({ active, payload, label, su }: any) {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{
+      background: 'white', border: '1px solid #E2E8F0', borderRadius: 8,
+      padding: '8px 12px', fontSize: 11, boxShadow: '0 2px 8px rgba(0,0,0,.08)',
+    }}>
+      <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
+      {payload.map((p: any) => (
+        <div key={p.dataKey} style={{ color: p.color, marginBottom: 1 }}>
+          {p.dataKey}: <strong>{p.value} {speedLabel(su)}</strong>
+        </div>
+      ))}
+    </div>
+  )
+})
+
+export const ModelComparison = memo(function ModelComparison({ spot, settings }: Props) {
   const su = settings.speedUnit
-  const visibleModels = BASE_MODELS.filter(m => settings.enabledModels.includes(m))
+  const visibleModels = useMemo(
+    () => BASE_MODELS.filter(m => settings.enabledModels.includes(m)),
+    [settings.enabledModels]
+  )
 
   // Fetch all base models in parallel
   const gfs   = useModelData(spot.lat, spot.lng, 'GFS')
@@ -64,24 +85,6 @@ export function ModelComparison({ spot, settings }: Props) {
 
   if (chartData.length === 0) return null
 
-  // Custom tooltip
-  function ChartTooltip({ active, payload, label }: any) {
-    if (!active || !payload?.length) return null
-    return (
-      <div style={{
-        background: 'white', border: '1px solid #E2E8F0', borderRadius: 8,
-        padding: '8px 12px', fontSize: 11, boxShadow: '0 2px 8px rgba(0,0,0,.08)',
-      }}>
-        <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
-        {payload.map((p: any) => (
-          <div key={p.dataKey} style={{ color: p.color, marginBottom: 1 }}>
-            {p.dataKey}: <strong>{p.value} {speedLabel(su)}</strong>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   return (
     <div className="section">
       <div className="section-header">
@@ -102,7 +105,7 @@ export function ModelComparison({ spot, settings }: Props) {
             axisLine={false}
             tickLine={false}
           />
-          <Tooltip content={<ChartTooltip />} />
+          <Tooltip content={<ChartTooltip su={su} />} />
           <Legend
             iconType="line"
             iconSize={14}
@@ -124,4 +127,4 @@ export function ModelComparison({ spot, settings }: Props) {
       </ResponsiveContainer>
     </div>
   )
-}
+})

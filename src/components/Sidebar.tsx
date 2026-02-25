@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, memo } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import { useForecast }                    from '../hooks/useForecast'
 import { windRating, ratingColor, dirLabel } from '../types'
 import type { Spot, WindModel }            from '../types'
@@ -32,13 +32,14 @@ const SpotRow = memo(function SpotRow({
   onDrop:      (e: React.DragEvent) => void
 }) {
   const { data, loading } = useForecast(spot.lat, spot.lng, model)
-  const avg = data.length
-    ? Math.round(data.reduce((a, d) => a + d.wind, 0) / data.length)
-    : spot.wind
-
-  const avgDir = data.length
-    ? Math.round(data.reduce((a, d) => a + d.dirDeg, 0) / data.length)
-    : spot.dir
+  const avg = useMemo(
+    () => data.length ? Math.round(data.reduce((a, d) => a + d.wind, 0) / data.length) : spot.wind,
+    [data, spot.wind]
+  )
+  const avgDir = useMemo(
+    () => data.length ? Math.round(data.reduce((a, d) => a + d.dirDeg, 0) / data.length) : spot.dir,
+    [data, spot.dir]
+  )
 
   const color = ratingColor(windRating(avg))
 
@@ -94,7 +95,7 @@ interface Props {
   onAddClick:  () => void
 }
 
-export function Sidebar({
+export const Sidebar = memo(function Sidebar({
   spots, selectedId, activeModel, onSelect, onRemove, onReorder, onAddClick,
 }: Props) {
   const [dragIdx, setDragIdx] = useState<number | null>(null)
@@ -174,4 +175,4 @@ export function Sidebar({
       </div>
     </aside>
   )
-}
+})

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo, memo, type ReactNode } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -20,8 +20,8 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 // ── Sunrise / Sunset bar ─────────────────────────────────────────────────────
-function SunBar({ lat, lng, dayOffset }: { lat: number; lng: number; dayOffset: number }) {
-  const { rise, set } = sunTimes(lat, lng, dayOffset)
+const SunBar = memo(function SunBar({ lat, lng, dayOffset }: { lat: number; lng: number; dayOffset: number }) {
+  const { rise, set } = useMemo(() => sunTimes(lat, lng, dayOffset), [lat, lng, dayOffset])
   return (
     <>
       <span className="sun-bar-item">
@@ -32,10 +32,10 @@ function SunBar({ lat, lng, dayOffset }: { lat: number; lng: number; dayOffset: 
       </span>
     </>
   )
-}
+})
 
 // ── Tooltip ───────────────────────────────────────────────────────────────────
-function ChartTooltip({ active, payload, label }: any) {
+const ChartTooltip = memo(function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
     <div className="chart-tooltip">
@@ -51,14 +51,14 @@ function ChartTooltip({ active, payload, label }: any) {
       ))}
     </div>
   )
-}
+})
 
 function fmtH(h: number): string {
   return `${String(h).padStart(2, '0')}:00`
 }
 
 // ── Wind direction strip ──────────────────────────────────────────────────────
-function WindDirStrip({ data, interval }: { data: HourForecast[]; interval?: number }) {
+const WindDirStrip = memo(function WindDirStrip({ data, interval }: { data: HourForecast[]; interval?: number }) {
   const step = interval ?? 3
   return (
     <div className="wind-dir-strip">
@@ -73,11 +73,11 @@ function WindDirStrip({ data, interval }: { data: HourForecast[]; interval?: num
       ))}
     </div>
   )
-}
+})
 
 // ── Section ───────────────────────────────────────────────────────────────────
-function Section({ title, sub, icon, right, children }: {
-  title: string; sub?: string; icon?: string; right?: React.ReactNode; children: React.ReactNode
+const Section = memo(function Section({ title, sub, icon, right, children }: {
+  title: string; sub?: string; icon?: string; right?: ReactNode; children: ReactNode
 }) {
   return (
     <div className="section">
@@ -90,25 +90,38 @@ function Section({ title, sub, icon, right, children }: {
       {children}
     </div>
   )
-}
+})
 
-// ── Hourly tide chart (reused in split view) ─────────────────────────────────
-function HourlyTideChart({ data, dayOnly, dayOffset, lat, hu = 'm' }: {
+// ── Hourly tide chart ─────────────────────────────────────────────────────────
+const HourlyTideChart = memo(function HourlyTideChart({ data, dayOnly, dayOffset, lat, hu = 'm' }: {
   data: HourForecast[]; dayOnly?: boolean; dayOffset: number; lat: number; hu?: 'm' | 'ft'
 }) {
   if (!data || data.length === 0) return null
-  const chartData = dayOnly ? data.slice(6, 20) : data
-  const allPeaks = getTidePeaks(dayOffset, lat)
 
-  // Auto y-axis domain
-  const allLevels = data.map(d => convertHeight(d.tide, hu))
-  const minL = Math.floor(Math.min(...allLevels) * 2) / 2
-  const maxL = Math.ceil(Math.max(...allLevels) * 2) / 2
+  const chartData = useMemo(
+    () => dayOnly ? data.slice(6, 20) : data,
+    [data, dayOnly]
+  )
+
+  const allPeaks = useMemo(() => getTidePeaks(dayOffset, lat), [dayOffset, lat])
+
+  const { minL, maxL } = useMemo(() => {
+    const allLevels = data.map(d => convertHeight(d.tide, hu))
+    return {
+      minL: Math.floor(Math.min(...allLevels) * 2) / 2,
+      maxL: Math.ceil(Math.max(...allLevels) * 2) / 2,
+    }
+  }, [data, hu])
+
+  const tideChartData = useMemo(
+    () => chartData.map(d => ({ ...d, tide: convertHeight(d.tide, hu) })),
+    [chartData, hu]
+  )
 
   return (
     <Section title="Tide" icon={iconTide} sub={dayOnly ? `${heightLabel(hu)} · 06:00–19:00` : `${heightLabel(hu)} · hourly`}>
       <ResponsiveContainer width="100%" height={110}>
-        <AreaChart data={chartData.map(d => ({ ...d, tide: convertHeight(d.tide, hu) }))} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
+        <AreaChart data={tideChartData} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
           <defs>
             <linearGradient id="hTideGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%"  stopColor="#10B981" stopOpacity={0.2} />
@@ -136,88 +149,100 @@ function HourlyTideChart({ data, dayOnly, dayOffset, lat, hu = 'm' }: {
       )}
     </Section>
   )
-}
+})
 
 // ── Combined chart view ───────────────────────────────────────────────────────
-// Pure table-based layout: chart drawn as inline SVG spanning all columns,
-// data rows as table cells — guaranteed pixel-perfect column alignment.
 const DAY_START = 6
 const DAY_END   = 19
 
-function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su, hu }: {
+// Pure cubic Bézier path builder (cardinal spline, tension ~0.3)
+function buildSmoothPath(
+  values: number[],
+  xAt: (i: number) => number,
+  yAt: (v: number) => number,
+): string {
+  if (values.length < 2) return ''
+  const tension = 0.3
+  const pts = values.map((v, i) => ({ x: xAt(i), y: yAt(v) }))
+  let d = `M${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[Math.min(pts.length - 1, i + 2)]
+    const cp1x = p1.x + (p2.x - p0.x) * tension
+    const cp1y = p1.y + (p2.y - p0.y) * tension
+    const cp2x = p2.x - (p3.x - p1.x) * tension
+    const cp2y = p2.y - (p3.y - p1.y) * tension
+    d += ` C${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
+  }
+  return d
+}
+
+const CombinedChart = memo(function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su, hu }: {
   data: HourForecast[]; windColor: string; dayOffset: number; lat: number; lng: number
   su: 'kts' | 'mph' | 'km/h'; hu: 'm' | 'ft'
 }) {
-  const data  = fullData.slice(DAY_START, DAY_END + 1)
-  const allTidePeaks = getTidePeaks(dayOffset, lat)
-  // Map peaks to nearest integer hour, storing type and actual time
-  const peakHourMap = new Map<number, { type: 'high' | 'low'; time: string }>()
-  allTidePeaks.forEach(p => peakHourMap.set(Math.round(p.hour), { type: p.type, time: p.time }))
-  const N     = data.length
-  const maxWind = Math.max(...data.map(d => Math.max(d.wind, d.gust)), 1)
+  const data = useMemo(() => fullData.slice(DAY_START, DAY_END + 1), [fullData])
+
+  const allTidePeaks = useMemo(() => getTidePeaks(dayOffset, lat), [dayOffset, lat])
+  const peakHourMap = useMemo(() => {
+    const map = new Map<number, { type: 'high' | 'low'; time: string }>()
+    allTidePeaks.forEach(p => map.set(Math.round(p.hour), { type: p.type, time: p.time }))
+    return map
+  }, [allTidePeaks])
+
+  const N       = data.length
+  const maxWind = useMemo(
+    () => Math.max(...data.map(d => Math.max(d.wind, d.gust)), 1),
+    [data]
+  )
 
   // Hover state
   const [hover, setHover] = useState<{ x: number; pct: number } | null>(null)
   const chartRef = useRef<HTMLTableCellElement>(null)
 
-  // SVG chart dimensions — viewBox is 0 0 1000 CHART_H for precision
+  // SVG chart dimensions
   const CHART_H = 160
   const SVG_W   = 1000
-  // Map data index to x coordinate (center of each column band)
-  const xAt = (i: number) => ((i + 0.5) / N) * SVG_W
-  // Map wind value to y coordinate
-  const yAt = (v: number) => CHART_H - (v / maxWind) * (CHART_H - 20) - 10
 
-  // Build smooth cubic Bézier SVG path (cardinal spline, tension ~0.3)
-  function smoothPath(values: number[]): string {
-    if (values.length < 2) return ''
-    const pts = values.map((v, i) => ({ x: xAt(i), y: yAt(v) }))
-    const tension = 0.3
-    let d = `M${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[Math.max(0, i - 1)]
-      const p1 = pts[i]
-      const p2 = pts[i + 1]
-      const p3 = pts[Math.min(pts.length - 1, i + 2)]
-      // Control points using Catmull-Rom → cubic Bézier conversion
-      const cp1x = p1.x + (p2.x - p0.x) * tension
-      const cp1y = p1.y + (p2.y - p0.y) * tension
-      const cp2x = p2.x - (p3.x - p1.x) * tension
-      const cp2y = p2.y - (p3.y - p1.y) * tension
-      d += ` C${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
-    }
-    return d
-  }
+  const xAt = useCallback((i: number) => ((i + 0.5) / N) * SVG_W, [N])
+  const yAt = useCallback((v: number) => CHART_H - (v / maxWind) * (CHART_H - 20) - 10, [maxWind])
 
-  const windPath = smoothPath(data.map(d => d.wind))
-  const gustPath = smoothPath(data.map(d => d.gust))
-  // Fill area: smooth curve down, then straight bottom edge
-  const windFill = windPath + ` L${xAt(N - 1).toFixed(1)} ${CHART_H} L${xAt(0).toFixed(1)} ${CHART_H} Z`
+  const { windPath, gustPath, windFill } = useMemo(() => {
+    const wp = buildSmoothPath(data.map(d => d.wind), xAt, yAt)
+    const gp = buildSmoothPath(data.map(d => d.gust), xAt, yAt)
+    const wf = wp + ` L${xAt(N - 1).toFixed(1)} ${CHART_H} L${xAt(0).toFixed(1)} ${CHART_H} Z`
+    return { windPath: wp, gustPath: gp, windFill: wf }
+  }, [data, xAt, yAt, N])
 
-  // Y-axis labels
-  const yTicks = [0, Math.round(maxWind / 3), Math.round(maxWind * 2 / 3), Math.round(maxWind)]
+  const yTicks = useMemo(
+    () => [0, Math.round(maxWind / 3), Math.round(maxWind * 2 / 3), Math.round(maxWind)],
+    [maxWind]
+  )
 
-  // Hover calculations (mouse + touch)
-  const getPosition = (clientX: number) => {
+  // Hover calculations
+  const getPosition = useCallback((clientX: number) => {
     const td = chartRef.current
     if (!td) return null
     const rect = td.getBoundingClientRect()
     const x = clientX - rect.left
     const pct = Math.max(0, Math.min(1, x / rect.width))
     return { x, pct }
-  }
-  const handleMouseMove = (e: React.MouseEvent) => {
+  }, [])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const pos = getPosition(e.clientX)
     if (pos) setHover(pos)
-  }
-  const handleTouchMove = (e: React.TouchEvent) => {
+  }, [getPosition])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     const pos = getPosition(e.touches[0].clientX)
     if (pos) setHover(pos)
-  }
+  }, [getPosition])
 
-  // Interpolate value at a fractional position (pct 0..1 across the chart)
+  // Interpolate value at a fractional position
   const lerp = (key: 'wind' | 'gust' | 'tide', pct: number): number => {
-    // pct maps to data space: pct=0 → index 0, pct=1 → index N-1
     const pos = pct * (N - 1)
     const i0 = Math.max(0, Math.min(N - 2, Math.floor(pos)))
     const i1 = i0 + 1
@@ -225,11 +250,9 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su, hu 
     return data[i0][key] * (1 - t) + data[i1][key] * t
   }
 
-  // Map pct to the actual hour — pct=0 → center of first column (06:00),
-  // pct=1 → center of last column (19:00)
   const hoverTime = hover ? (() => {
     const totalMinutes = Math.round((DAY_START + hover.pct * (DAY_END - DAY_START)) * 60)
-    const snapped = Math.round(totalMinutes / 15) * 15  // snap to 15 min
+    const snapped = Math.round(totalMinutes / 15) * 15
     const h = Math.floor(snapped / 60)
     const m = snapped % 60
     return `${String(Math.min(h, 23)).padStart(2, '0')}:${String(m).padStart(2, '0')}`
@@ -237,7 +260,6 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su, hu 
 
   const hoverWind = hover ? convertSpeed(Math.round(lerp('wind', hover.pct)), su) : 0
   const hoverGust = hover ? convertSpeed(Math.round(lerp('gust', hover.pct)), su) : 0
-  // Vertical line x in SVG coordinates — same mapping as data points
   const hoverSvgX = hover ? ((hover.pct * (N - 1) + 0.5) / N) * SVG_W : 0
 
   return (
@@ -267,29 +289,22 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su, hu 
                 onTouchEnd={() => setHover(null)}>
                 <svg width="100%" height={CHART_H} style={{ display: 'block' }}
                   preserveAspectRatio="none" viewBox={`0 0 ${SVG_W} ${CHART_H}`}>
-                  {/* Grid lines */}
                   {yTicks.map((v, i) => (
                     <line key={i} x1="0" x2={SVG_W} y1={yAt(v)} y2={yAt(v)}
                       stroke="#E8EDF3" strokeWidth={1} strokeDasharray="4 4" />
                   ))}
-                  {/* Wind fill */}
                   <path d={windFill} fill={windColor} opacity={0.1} />
-                  {/* Gust line (dashed) */}
                   <path d={gustPath} fill="none" stroke="#93C5FD" strokeWidth={2}
                     strokeDasharray="6 4" />
-                  {/* Wind line */}
                   <path d={windPath} fill="none" stroke={windColor} strokeWidth={3} />
-                  {/* Dots on wind line */}
                   {data.map((d, i) => (
                     <circle key={i} cx={xAt(i)} cy={yAt(d.wind)} r={4} fill={windColor} />
                   ))}
-                  {/* Hover vertical line */}
                   {hover && (
                     <line x1={hoverSvgX} x2={hoverSvgX} y1={0} y2={CHART_H}
                       stroke="#64748B" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.6} />
                   )}
                 </svg>
-                {/* Floating tooltip */}
                 {hover && (
                   <div className="combined-tooltip"
                     style={{ left: Math.min(hover.x, (chartRef.current?.clientWidth ?? 300) - 110) }}>
@@ -378,19 +393,23 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su, hu 
       </div>
     </Section>
   )
-}
+})
 
-// ── Split view (original multi-pane) ──────────────────────────────────────────
-function SplitView({ data, windColor, isBlend, dayOffset, lat, lng, su, hu, tu }: {
+// ── Split view ────────────────────────────────────────────────────────────────
+const SplitView = memo(function SplitView({ data, windColor, isBlend, dayOffset, lat, lng, su, hu, tu }: {
   data: HourForecast[]; windColor: string; isBlend: boolean; dayOffset: number; lat: number; lng: number
   su: 'kts' | 'mph' | 'km/h'; hu: 'm' | 'ft'; tu: '°C' | '°F'
 }) {
-  // Daytime window for wind and tide charts
-  const dayData = data.slice(6, 20).map(d => ({
+  const dayData = useMemo(() => data.slice(6, 20).map(d => ({
     ...d,
     wind: convertSpeed(d.wind, su),
     gust: convertSpeed(d.gust, su),
-  }))
+  })), [data, su])
+
+  const tempChartData = useMemo(
+    () => data.map(d => ({ ...d, temp: convertTemp(d.temp, tu) })),
+    [data, tu]
+  )
 
   return (
     <>
@@ -437,7 +456,7 @@ function SplitView({ data, windColor, isBlend, dayOffset, lat, lng, su, hu, tu }
       <div className="two-col">
         <Section title="Temperature" icon={iconTemp} sub={`${tu} · hourly`}>
           <ResponsiveContainer width="100%" height={150}>
-            <LineChart data={data.map(d => ({ ...d, temp: convertTemp(d.temp, tu) }))} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
+            <LineChart data={tempChartData} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
               <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#8A96A8' }}
                 axisLine={false} tickLine={false} interval={5} />
@@ -464,7 +483,7 @@ function SplitView({ data, windColor, isBlend, dayOffset, lat, lng, su, hu, tu }
       </div>
     </>
   )
-}
+})
 
 // ── HourlyPanel ───────────────────────────────────────────────────────────────
 interface Props {
@@ -482,9 +501,16 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, sett
   )
   const isBlend   = model === 'BLEND'
   const windColor = isBlend ? '#6366F1' : '#2563EB'
-  const dt = new Date(); dt.setDate(dt.getDate() + dayOffset)
-  const day = DAY_NAMES[dt.getDay()]
-  const dateLabel = `${MONTH_NAMES[dt.getMonth()]} ${dt.getDate()}`
+
+  const { day, dateLabel } = useMemo(() => {
+    const dt = new Date()
+    dt.setDate(dt.getDate() + dayOffset)
+    return {
+      day:       DAY_NAMES[dt.getDay()],
+      dateLabel: `${MONTH_NAMES[dt.getMonth()]} ${dt.getDate()}`,
+    }
+  }, [dayOffset])
+
   const su = settings.speedUnit
   const hu = settings.heightUnit
   const tu = settings.tempUnit
@@ -510,7 +536,6 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, sett
     const dt = Date.now() - touchRef.current.startTime
     touchRef.current = null
 
-    // Must be fast (< 400ms), horizontal (|dx| > 2*|dy|), and long enough (> 60px)
     if (dt < 400 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) {
       if (dx > 0 && dayOffset > 0) {
         onDayChange?.(dayOffset - 1)
@@ -520,7 +545,7 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, sett
     }
   }, [dayOffset, onDayChange])
 
-  // ── Keyboard navigation for day switching ──────────────────
+  // ── Keyboard navigation ──────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' && dayOffset > 0) {
@@ -534,8 +559,6 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, sett
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [dayOffset, onDayChange, onClose])
-
-  // Average wind for kite calc — removed
 
   return (
     <div className="modal-backdrop" onClick={onClose}>

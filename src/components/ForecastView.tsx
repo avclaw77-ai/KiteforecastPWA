@@ -1,3 +1,4 @@
+import { memo, useMemo, type ReactNode } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -14,8 +15,10 @@ import iconWind from '../assets/icons/wind_direction-24.png'
 import iconTemp from '../assets/icons/temperature-24.png'
 import iconPrecip from '../assets/icons/precipitation-24.png'
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
 // ── Tooltip ───────────────────────────────────────────────────────────────────
-function ChartTooltip({ active, payload, label }: any) {
+const ChartTooltip = memo(function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
     <div className="chart-tooltip">
@@ -31,10 +34,10 @@ function ChartTooltip({ active, payload, label }: any) {
       ))}
     </div>
   )
-}
+})
 
-// ── Weekly wind chart tooltip (shows interpolated time within the day) ──────
-function WeeklyWindTooltip({ active, payload, label }: any) {
+// ── Weekly wind chart tooltip ─────────────────────────────────────────────────
+const WeeklyWindTooltip = memo(function WeeklyWindTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
     <div className="chart-tooltip">
@@ -46,12 +49,11 @@ function WeeklyWindTooltip({ active, payload, label }: any) {
       ))}
     </div>
   )
-}
+})
 
 // ── Wind direction strip below charts ────────────────────────────────────────
-function WindDirStrip({ data, labelKey, interval }: {
+const WindDirStrip = memo(function WindDirStrip({ data, interval }: {
   data: { dirDeg: number; [k: string]: any }[]
-  labelKey: string
   interval?: number
 }) {
   const step = interval ?? 1
@@ -68,10 +70,10 @@ function WindDirStrip({ data, labelKey, interval }: {
       ))}
     </div>
   )
-}
+})
 
 // ── Wind arrow ────────────────────────────────────────────────────────────────
-function WindArrow({ deg, size = 18 }: { deg: number; size?: number }) {
+const WindArrow = memo(function WindArrow({ deg, size = 18 }: { deg: number; size?: number }) {
   return (
     <svg
       width={size} height={size} viewBox="0 0 24 24"
@@ -80,11 +82,11 @@ function WindArrow({ deg, size = 18 }: { deg: number; size?: number }) {
       <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="#2563EB" />
     </svg>
   )
-}
+})
 
 // ── Section ───────────────────────────────────────────────────────────────────
-function Section({ title, sub, icon, children }: {
-  title: string; sub?: string; icon?: string; children: React.ReactNode
+const Section = memo(function Section({ title, sub, icon, children }: {
+  title: string; sub?: string; icon?: string; children: ReactNode
 }) {
   return (
     <div className="section">
@@ -96,36 +98,21 @@ function Section({ title, sub, icon, children }: {
       {children}
     </div>
   )
-}
-
-// ── Tide tooltip ─────────────────────────────────────────────────────────────
+})
 
 // ── Day card ──────────────────────────────────────────────────────────────────
-function DayCard({ d, isBlend, onClick, speedUnit = 'kts' }: {
+const DayCard = memo(function DayCard({ d, isBlend, onClick, speedUnit = 'kts' }: {
   d: DayForecast; isBlend: boolean; onClick: () => void; speedUnit?: 'kts' | 'mph' | 'km/h'
 }) {
   const wind = convertSpeed(d.wind, speedUnit)
   const gust = convertSpeed(d.gust, speedUnit)
   const color = ratingColor(windRating(d.wind))
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   const dt = d.date ? new Date(d.date + 'T00:00:00') : null
   const dateLabel = dt ? `${MONTHS[dt.getMonth()]} ${dt.getDate()}` : ''
   return (
     <div
-      className="day-card"
+      className={['day-card', isBlend ? 'day-card--blend' : ''].join(' ')}
       onClick={onClick}
-      onMouseEnter={e => {
-        const el = e.currentTarget as HTMLElement
-        el.style.borderColor = isBlend ? '#6366F1' : '#2563EB'
-        el.style.transform   = 'translateY(-2px)'
-        el.style.boxShadow   = '0 4px 12px rgba(0,0,0,.10)'
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLElement
-        el.style.borderColor = '#E8EDF3'
-        el.style.transform   = 'translateY(0)'
-        el.style.boxShadow   = '0 1px 4px rgba(0,0,0,.04)'
-      }}
     >
       <div className="day-card-label">{d.day}</div>
       {dateLabel && <div className="day-card-date">{dateLabel}</div>}
@@ -143,15 +130,15 @@ function DayCard({ d, isBlend, onClick, speedUnit = 'kts' }: {
       )}
     </div>
   )
-}
+})
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
-function SkeletonBar({ h = 180 }: { h?: number }) {
+const SkeletonBar = memo(function SkeletonBar({ h = 180 }: { h?: number }) {
   return <div className="skeleton" style={{ height: h, borderRadius: 8 }} />
-}
+})
 
 // ── My spots map view ─────────────────────────────────────────────────────────
-function MyMapView({ spots, selectedId, onSpotClick }: {
+const MyMapView = memo(function MyMapView({ spots, selectedId, onSpotClick }: {
   spots:       Spot[]
   selectedId:  string
   onSpotClick: (id: string) => void
@@ -176,7 +163,7 @@ function MyMapView({ spots, selectedId, onSpotClick }: {
       })}
     </div>
   )
-}
+})
 
 // ── ForecastView ──────────────────────────────────────────────────────────────
 interface Props {
@@ -199,6 +186,16 @@ export function ForecastView({
   const su = settings.speedUnit
   const hu = settings.heightUnit
   const tu = settings.tempUnit
+
+  const windChartData = useMemo(
+    () => data.map(d => ({ ...d, wind: convertSpeed(d.wind, su), gust: convertSpeed(d.gust, su) })),
+    [data, su]
+  )
+
+  const tempChartData = useMemo(
+    () => data.map(d => ({ ...d, temp: convertTemp(d.temp, tu) })),
+    [data, tu]
+  )
 
   if (mapView) {
     return (
@@ -243,7 +240,7 @@ export function ForecastView({
         {loading ? <SkeletonBar h={180} /> : (
           <>
             <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={data.map(d => ({ ...d, wind: convertSpeed(d.wind, su), gust: convertSpeed(d.gust, su) }))} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+              <AreaChart data={windChartData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
                 <defs>
                   <linearGradient id="windGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor={windColor} stopOpacity={0.15} />
@@ -262,7 +259,7 @@ export function ForecastView({
                   dot={{ r: 3, fill: windColor, strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
-            <WindDirStrip data={data} labelKey="day" />
+            <WindDirStrip data={data} />
           </>
         )}
       </Section>
@@ -275,7 +272,7 @@ export function ForecastView({
         <Section title="Temperature" icon={iconTemp} sub={tu}>
           {loading ? <SkeletonBar h={140} /> : (
             <ResponsiveContainer width="100%" height={140}>
-              <LineChart data={data.map(d => ({ ...d, temp: convertTemp(d.temp, tu) }))} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
+              <LineChart data={tempChartData} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
                 <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#8A96A8' }} axisLine={false} tickLine={false} />

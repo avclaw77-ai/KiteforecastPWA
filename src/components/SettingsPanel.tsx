@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react'
 import { ALL_MODELS } from '../types'
 import type { AppSettings, WindModel, SpeedUnit, HeightUnit, TempUnit } from '../types'
 
@@ -7,7 +8,7 @@ interface Props {
   onClose:  () => void
 }
 
-function ToggleChip({ label, active, color, onClick }: {
+const ToggleChip = memo(function ToggleChip({ label, active, color, onClick }: {
   label: string; active: boolean; color?: string; onClick: () => void
 }) {
   return (
@@ -28,7 +29,7 @@ function ToggleChip({ label, active, color, onClick }: {
       {label}
     </button>
   )
-}
+})
 
 function RadioGroup<T extends string>({ options, value, onChange }: {
   options: { value: T; label: string }[]
@@ -65,15 +66,14 @@ const MODEL_COLORS: Record<string, string> = {
   MF: '#8B5CF6', GEM: '#EF4444', BLEND: '#6366F1',
 }
 
-export function SettingsPanel({ settings, onUpdate, onClose }: Props) {
-  function toggleModel(m: WindModel) {
+export const SettingsPanel = memo(function SettingsPanel({ settings, onUpdate, onClose }: Props) {
+  const toggleModel = useCallback((m: WindModel) => {
     const cur = settings.enabledModels
     const isEnabled = cur.includes(m)
-    // Don't allow disabling all models
     if (isEnabled && cur.length <= 1) return
     const next = isEnabled ? cur.filter(x => x !== m) : [...cur, m]
     onUpdate({ enabledModels: next })
-  }
+  }, [settings.enabledModels, onUpdate])
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -189,4 +189,4 @@ export function SettingsPanel({ settings, onUpdate, onClose }: Props) {
       </div>
     </div>
   )
-}
+})
