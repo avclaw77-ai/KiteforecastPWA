@@ -256,14 +256,6 @@ body { background: var(--bg); }
   box-shadow: 0 1px 4px rgba(0,0,0,.04);
   transition: border-color .2s, transform .2s, box-shadow .2s;
 }
-.day-card:hover {
-  border-color: #2563EB;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.10);
-}
-.day-card--blend:hover {
-  border-color: #6366F1;
-}
 .day-card-label  { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 1px; }
 .day-card-date   { font-size: 9px; color: var(--muted); opacity: 0.7; margin-bottom: 4px; }
 .day-card-wind   { font-size: 18px; font-weight: 700; margin-top: 4px; }
@@ -662,7 +654,9 @@ body { background: var(--bg); }
   .titlebar-row { padding: 8px 12px; flex-wrap: wrap; }
   .titlebar-title { font-size: 14px; }
   .titlebar-logo { font-size: 16px; }
-  .titlebar-models { flex-basis: 100%; justify-content: center; padding: 4px 0; }
+  .titlebar-brand { order: 1; }
+  .titlebar-actions { order: 2; margin-left: auto; }
+  .titlebar-models { order: 3; flex-basis: 100%; justify-content: center; padding: 4px 0; }
   .model-btn { padding: 3px 8px; font-size: 10px; }
 
   /* Layout: vertical stack instead of sidebar + main */
