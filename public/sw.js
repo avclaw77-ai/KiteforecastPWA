@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mywind-v1'
+const CACHE_NAME = 'mywind-v2'
 
 // Install: activate immediately
 self.addEventListener('install', () => self.skipWaiting())

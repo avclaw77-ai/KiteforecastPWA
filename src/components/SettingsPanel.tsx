@@ -157,34 +157,6 @@ export const SettingsPanel = memo(function SettingsPanel({ settings, onUpdate, o
               onChange={v => onUpdate({ tempUnit: v })}
             />
           </div>
-
-          {/* Storm Glass API */}
-          <div className="settings-section">
-            <div className="settings-label">Tide Data — Storm Glass API</div>
-            <div className="settings-hint">
-              Free at <a href="https://stormglass.io" target="_blank" rel="noopener"
-                style={{ color: '#2563EB' }}>stormglass.io</a> (10 requests/day). Leave empty to use simulated tides.
-            </div>
-            <input
-              type="text"
-              value={settings.stormGlassKey}
-              onChange={e => onUpdate({ stormGlassKey: e.target.value.trim() })}
-              placeholder="Paste your API key here…"
-              style={{
-                width: '100%', boxSizing: 'border-box', marginTop: 8,
-                padding: '7px 10px', border: '1px solid #E2E8F0', borderRadius: 8,
-                fontSize: 12, fontFamily: 'monospace', outline: 'none',
-                background: 'var(--bg)', color: 'var(--text)',
-              }}
-              onFocus={e => { e.currentTarget.style.borderColor = '#2563EB' }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#E2E8F0' }}
-            />
-            {settings.stormGlassKey && (
-              <div style={{ fontSize: 10, color: '#10B981', marginTop: 4, fontWeight: 600 }}>
-                ✓ Key set — real tide data will load on next spot view
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
