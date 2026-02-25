@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import type { WindModel } from '../types'
 import { ALL_MODELS } from '../types'
 import logoImg from '../assets/icons/logo-128.png'
@@ -16,10 +17,13 @@ interface Props {
   refreshing?:     boolean
 }
 
-export function TitleBar({
+export const TitleBar = memo(function TitleBar({
   model, onModelChange, enabledModels, onSettingsClick, onAddSpot, onRefresh, refreshing,
 }: Props & { darkMode?: boolean }) {
-  const visibleModels = ALL_MODELS.filter(m => enabledModels.includes(m))
+  const visibleModels = useMemo(
+    () => ALL_MODELS.filter(m => enabledModels.includes(m)),
+    [enabledModels]
+  )
 
   return (
     <header className="titlebar">
@@ -81,4 +85,4 @@ export function TitleBar({
       </div>
     </header>
   )
-}
+})
