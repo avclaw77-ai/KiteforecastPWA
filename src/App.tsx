@@ -97,7 +97,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-surface overflow-hidden">
+    <div className="app-shell flex flex-col h-screen bg-surface overflow-hidden">
       <TitleBar
         spotName={selSpot?.name}
         country={selSpot?.country}
@@ -107,6 +107,7 @@ export default function App() {
         onToggleMap={() => setShowMapView(v => !v)}
         enabledModels={settings.enabledModels}
         onSettingsClick={() => setShowSettings(true)}
+        onAddSpot={() => setShowAdd(true)}
         darkMode={settings.darkMode}
         onRefresh={handleRefresh}
         refreshing={refreshing}

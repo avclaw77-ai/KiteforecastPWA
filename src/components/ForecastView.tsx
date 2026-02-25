@@ -6,13 +6,11 @@ import {
 import { useForecast }                       from '../hooks/useForecast'
 import { ModelComparison }                   from './ModelComparison'
 import { windRating, ratingColor, dirLabel,
-         convertSpeed, convertHeight, convertTemp,
-         speedLabel, heightLabel }            from '../types'
-import { tideAt, tidePeaks }                 from '../api/tide'
+         convertSpeed, convertTemp,
+         speedLabel }            from '../types'
 import type { Spot, WindModel, DayForecast, AppSettings } from '../types'
 
 import iconWind from '../assets/icons/wind_direction-24.png'
-import iconTide from '../assets/icons/tide-24.png'
 import iconTemp from '../assets/icons/temperature-24.png'
 import iconPrecip from '../assets/icons/precipitation-24.png'
 
@@ -101,71 +99,6 @@ function Section({ title, sub, icon, children }: {
 }
 
 // ── Tide tooltip ─────────────────────────────────────────────────────────────
-function TideTooltip({ active, payload }: any) {
-  if (!active || !payload?.length) return null
-  const d = payload[0]?.payload
-  if (!d) return null
-  return (
-    <div className="chart-tooltip">
-      <div className="chart-tooltip-label">{d.dayLabel} {d.timeLabel}</div>
-      <div style={{ color: '#10B981' }}>
-        Tide: <strong>{d.level.toFixed(1)} m</strong>
-      </div>
-    </div>
-  )
-}
-
-// ── Tide chart (24 points per day, realistic semi-diurnal model) ─────────────
-function TideChart({ data, lat, heightUnit = 'm' }: { data: DayForecast[]; lat: number; heightUnit?: 'm' | 'ft' }) {
-  const pts = data.flatMap((d, dayIdx) =>
-    Array.from({ length: 24 }, (_, h) => ({
-      dayLabel:  d.day,
-      timeLabel: `${String(h).padStart(2, '0')}:00`,
-      xKey:      `${d.date}-${String(h).padStart(2, '0')}`,
-      isMidnight: h === 0,
-      dayName:   d.day,
-      level:     convertHeight(tideAt(dayIdx, h, lat), heightUnit),
-    }))
-  )
-
-  // Auto y-axis domain from actual data
-  const allLevels = pts.map(p => p.level)
-  const minL = Math.floor(Math.min(...allLevels) * 2) / 2
-  const maxL = Math.ceil(Math.max(...allLevels) * 2) / 2
-
-  // Custom tick: only show label at midnight (h=0) positions
-  const DayTick = (props: any) => {
-    const { x, y, payload } = props
-    if (!payload?.value) return null
-    const pt = pts.find(p => p.xKey === payload.value)
-    if (!pt || !pt.isMidnight) return null
-    return (
-      <text x={x} y={y + 10} textAnchor="middle" fontSize={10} fill="#8A96A8">
-        {pt.dayName}
-      </text>
-    )
-  }
-
-  return (
-    <ResponsiveContainer width="100%" height={120}>
-      <AreaChart data={pts} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
-        <defs>
-          <linearGradient id="tideGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor="#10B981" stopOpacity={0.2} />
-            <stop offset="95%" stopColor="#10B981" stopOpacity={0}   />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
-        <XAxis dataKey="xKey" tick={<DayTick />} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 10, fill: '#8A96A8' }} axisLine={false} tickLine={false}
-          domain={[minL, maxL]} />
-        <Tooltip content={<TideTooltip />} />
-        <Area type="monotone" dataKey="level" stroke="#10B981" strokeWidth={2}
-          fill="url(#tideGrad)" name="Tide" dot={false} />
-      </AreaChart>
-    </ResponsiveContainer>
-  )
-}
 
 // ── Day card ──────────────────────────────────────────────────────────────────
 function DayCard({ d, isBlend, onClick, speedUnit = 'kts' }: {
@@ -208,7 +141,6 @@ function DayCard({ d, isBlend, onClick, speedUnit = 'kts' }: {
           {d.modelAgreement === 'high' ? '●' : d.modelAgreement === 'moderate' ? '◐' : '○'}
         </div>
       )}
-      <div className="day-card-hint">tap for hours</div>
     </div>
   )
 }
@@ -286,7 +218,7 @@ export function ForecastView({
         <span className={['model-tag', isBlend ? 'model-tag--blend' : ''].join(' ')}>
           {isBlend ? '⊕ BLEND' : model}
         </span>
-        <span className="forecast-hint">Click any day for hourly detail</span>
+        <span className="forecast-hint">Click for daily view</span>
       </div>
 
       {error && <div className="error-banner">Could not load forecast: {error}</div>}
@@ -335,32 +267,8 @@ export function ForecastView({
         )}
       </Section>
 
-      {/* Tide */}
-      <Section title="Tide" icon={iconTide} sub={`${heightLabel(hu)} · 7-day cycle`}>
-        {loading ? <SkeletonBar h={120} /> : (
-          <>
-            <TideChart data={data} lat={spot.lat} heightUnit={hu} />
-            <div className="tide-times">
-              {data.map((d, dayIdx) => {
-                const peaks = tidePeaks(dayIdx, spot.lat)
-                const highs = peaks.filter(p => p.type === 'high')
-                const lows = peaks.filter(p => p.type === 'low')
-                return (
-                  <div key={dayIdx} className="tide-day">
-                    <div className="tide-day-label">{d.day}</div>
-                    {highs.map((h, i) => (
-                      <div key={`h${i}`} className="tide-high">↑{h.time} <span className="tide-level">{convertHeight(h.level, hu)}{hu}</span></div>
-                    ))}
-                    {lows.map((l, i) => (
-                      <div key={`l${i}`} className="tide-low">↓{l.time} <span className="tide-level">{convertHeight(l.level, hu)}{hu}</span></div>
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
-      </Section>
+      {/* Model overlay */}
+      <ModelComparison spot={spot} activeModel={model} onModelChange={() => {}} settings={settings} />
 
       {/* Temp + Rain */}
       <div className="two-col">
@@ -393,9 +301,6 @@ export function ForecastView({
           )}
         </Section>
       </div>
-
-      {/* Model overlay */}
-      <ModelComparison spot={spot} activeModel={model} onModelChange={() => {}} settings={settings} />
     </div>
   )
 }

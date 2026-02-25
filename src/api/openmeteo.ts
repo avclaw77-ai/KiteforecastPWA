@@ -39,6 +39,20 @@ const hourlyInflight = new Map<string, Promise<HourForecast[]>>()
 
 function ck(...p: (string | number)[]): string { return p.join('|') }
 
+// ── Fetch with retry (handles 429 rate limits) ──────────────────────────────
+async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    const res = await fetch(url)
+    if (res.status === 429) {
+      const wait = Math.pow(2, i) * 1000 + Math.random() * 500
+      await new Promise(r => setTimeout(r, wait))
+      continue
+    }
+    return res
+  }
+  return fetch(url) // final attempt, let it throw naturally
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // BLEND UTILITIES — meteorological best practices for multi-model ensembles
 // ══════════════════════════════════════════════════════════════════════════════
@@ -215,7 +229,7 @@ export async function fetchDailyForecast(
     url.searchParams.set('timezone',      'auto')
     url.searchParams.set('forecast_days', '7')
 
-    const res  = await fetch(url.toString())
+    const res  = await fetchWithRetry(url.toString())
     if (!res.ok) throw new Error(`${model}: ${res.status}`)
     const json = await res.json()
     const d    = json.daily ?? {}
@@ -322,7 +336,7 @@ export async function fetchHourlyForecast(
     url.searchParams.set('timezone',      'auto')
     url.searchParams.set('forecast_days', '7')
 
-    const res  = await fetch(url.toString())
+    const res  = await fetchWithRetry(url.toString())
     if (!res.ok) throw new Error(`${model}: ${res.status}`)
     const json = await res.json()
     const h    = json.hourly ?? {}
