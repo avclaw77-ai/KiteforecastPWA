@@ -762,18 +762,29 @@ body { background: var(--bg); }
   }
   .modal-backdrop {
     align-items: flex-end !important;
+    padding-top: env(safe-area-inset-top, 0px);
   }
   .modal {
     border-radius: 16px 16px 0 0;
-    max-height: calc(100vh - env(safe-area-inset-top, 20px) - 20px);
-    max-height: calc(100dvh - env(safe-area-inset-top, 20px) - 20px);
+    max-height: calc(100vh - env(safe-area-inset-top, 20px) - 40px);
+    max-height: calc(100dvh - env(safe-area-inset-top, 20px) - 40px);
     padding-top: 16px;
     overflow-y: auto;
   }
   .add-spot-modal {
     border-radius: 16px 16px 0 0;
-    height: calc(100vh - env(safe-area-inset-top, 20px) - 20px);
-    height: calc(100dvh - env(safe-area-inset-top, 20px) - 20px);
+    height: calc(100vh - env(safe-area-inset-top, 20px) - 40px);
+    height: calc(100dvh - env(safe-area-inset-top, 20px) - 40px);
+  }
+
+  /* Extra safety for standalone PWA mode (no Safari chrome) */
+  @media (display-mode: standalone) {
+    .modal {
+      max-height: calc(100dvh - env(safe-area-inset-top, 47px) - 16px);
+    }
+    .add-spot-modal {
+      height: calc(100dvh - env(safe-area-inset-top, 47px) - 16px);
+    }
   }
 
   /* ── Modal header: prevent wrapping ─────────────────────────────────────── */
