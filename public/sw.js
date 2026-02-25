@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kiteforecast-v3'
+const CACHE_NAME = 'mywind-v1'
 
 // Install: activate immediately
 self.addEventListener('install', () => self.skipWaiting())

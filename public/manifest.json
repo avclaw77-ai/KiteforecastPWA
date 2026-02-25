@@ -1,6 +1,6 @@
 {
-  "name": "KiteForecast",
-  "short_name": "KiteForecast",
+  "name": "myWind",
+  "short_name": "myWind",
   "description": "Multi-model kite wind & tide forecasts",
   "start_url": "/",
   "display": "standalone",

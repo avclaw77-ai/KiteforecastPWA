@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import type { AppSettings } from '../types'
 import { DEFAULT_SETTINGS } from '../types'
 
-const STORAGE_KEY = 'kiteforecast-settings'
+const STORAGE_KEY = 'mywind-settings'
 
 function loadSettings(): AppSettings {
   try {

@@ -1,5 +1,6 @@
 import type { WindModel } from '../types'
 import { ALL_MODELS } from '../types'
+import logoImg from '../assets/icons/logo-64.png'
 
 interface Props {
   spotName?:       string
@@ -10,26 +11,40 @@ interface Props {
   onToggleMap:     () => void
   enabledModels:   WindModel[]
   onSettingsClick: () => void
+  onRefresh?:      () => void
+  refreshing?:     boolean
 }
 
 export function TitleBar({
-  model, onModelChange, enabledModels, onSettingsClick,
-}: Props) {
+  model, onModelChange, enabledModels, onSettingsClick, onRefresh, refreshing,
+}: Props & { darkMode?: boolean }) {
   const visibleModels = ALL_MODELS.filter(m => enabledModels.includes(m))
 
   return (
     <header className="titlebar">
       <div className="titlebar-traffic-light-spacer" />
 
-      {/* Row 1: Brand + settings */}
+      {/* Row 1: Brand + actions */}
       <div className="titlebar-top">
         <div className="titlebar-brand">
-          <span className="titlebar-logo">🪁</span>
-          <span className="titlebar-title">KiteForecast</span>
+          <img src={logoImg} alt="myWind" className="titlebar-logo-img" />
+          <span className="titlebar-title">myWind</span>
         </div>
-        <button className="settings-btn no-drag" onClick={onSettingsClick}>
-          ⚙
-        </button>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {onRefresh && (
+            <button
+              className="settings-btn no-drag"
+              onClick={onRefresh}
+              title="Refresh forecast data"
+              style={refreshing ? { animation: 'spin .8s linear infinite' } : undefined}
+            >
+              ↻
+            </button>
+          )}
+          <button className="settings-btn no-drag" onClick={onSettingsClick}>
+            ⚙︎
+          </button>
+        </div>
       </div>
 
       {/* Row 2: Model selector */}

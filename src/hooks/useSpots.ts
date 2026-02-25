@@ -3,7 +3,7 @@ import { KNOWN_SPOTS } from '../data/knownSpots'
 import type { Spot } from '../types'
 
 const DEFAULT_IDS = ['k27', 'k2']
-const STORAGE_KEY = 'kiteforecast-spots'
+const STORAGE_KEY = 'mywind-spots'
 
 function getDefaultSpots(): Spot[] {
   return KNOWN_SPOTS.filter(s => DEFAULT_IDS.includes(s.id))

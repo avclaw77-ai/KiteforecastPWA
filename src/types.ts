@@ -15,6 +15,7 @@ export interface AppSettings {
   heightUnit:     HeightUnit
   tempUnit:       TempUnit
   stormGlassKey:  string       // Storm Glass API key for real tide data
+  darkMode:       boolean
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   heightUnit:    'm',
   tempUnit:      '°C',
   stormGlassKey: (import.meta.env && import.meta.env.VITE_STORMGLASS_KEY) || '',
+  darkMode:      false,
 }
 
 // ── Unit conversion helpers ──────────────────────────────────────────────────
@@ -148,4 +150,39 @@ declare global {
       }
     }
   }
+}
+
+// ── Sunrise / sunset calculation ─────────────────────────────────────────────
+export function sunTimes(lat: number, lng: number, dayOffset = 0): { rise: string; set: string } {
+  const d = new Date()
+  d.setDate(d.getDate() + dayOffset)
+  const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86400000)
+
+  const zenith = 90.833
+  const D2R = Math.PI / 180
+  const R2D = 180 / Math.PI
+
+  const gamma = (2 * Math.PI / 365) * (dayOfYear - 1)
+  const eqTime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) - 0.014615 * Math.cos(2 * gamma) - 0.04089 * Math.sin(2 * gamma))
+  const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma)
+
+  const cosHA = (Math.cos(zenith * D2R) / (Math.cos(lat * D2R) * Math.cos(decl)) - Math.tan(lat * D2R) * Math.tan(decl))
+
+  if (cosHA > 1) return { rise: '--:--', set: '--:--' }
+  if (cosHA < -1) return { rise: '00:00', set: '23:59' }
+
+  const ha = R2D * Math.acos(cosHA)
+  const sunrise = 720 - 4 * (lng + ha) - eqTime
+  const sunset  = 720 - 4 * (lng - ha) - eqTime
+
+  const tzOffset = Math.round(lng / 15) * 60
+  const localRise = sunrise + tzOffset
+  const localSet  = sunset + tzOffset
+
+  const fmt = (mins: number) => {
+    const m = ((mins % 1440) + 1440) % 1440
+    return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`
+  }
+
+  return { rise: fmt(localRise), set: fmt(localSet) }
 }

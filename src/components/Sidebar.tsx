@@ -1,20 +1,20 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { useForecast }                    from '../hooks/useForecast'
 import { windRating, ratingColor, dirLabel } from '../types'
 import type { Spot, WindModel }            from '../types'
 
 // ── Wind direction arrow ──────────────────────────────────────────────────────
-function MiniArrow({ deg }: { deg: number }) {
+const MiniArrow = memo(function MiniArrow({ deg }: { deg: number }) {
   return (
     <svg width={14} height={14} viewBox="0 0 24 24"
       style={{ transform: `rotate(${deg}deg)`, opacity: 0.6, flexShrink: 0 }}>
       <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="#64748B" />
     </svg>
   )
-}
+})
 
 // ── Single spot row ───────────────────────────────────────────────────────────
-function SpotRow({
+const SpotRow = memo(function SpotRow({
   spot, isSelected, model, onSelect, onRemove,
   isDragging, isOver,
   onDragStart, onDragOver, onDragEnd, onDrop,
@@ -81,7 +81,7 @@ function SpotRow({
       </button>
     </div>
   )
-}
+})
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 interface Props {

@@ -85,6 +85,22 @@ export function SettingsPanel({ settings, onUpdate, onClose }: Props) {
         </div>
 
         <div className="settings-body">
+          {/* Dark mode */}
+          <div className="settings-section">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div className="settings-label">Appearance</div>
+                <div className="settings-hint">{settings.darkMode ? 'Dark mode' : 'Light mode'}</div>
+              </div>
+              <button
+                className={`theme-toggle ${settings.darkMode ? 'theme-toggle--dark' : ''}`}
+                onClick={() => onUpdate({ darkMode: !settings.darkMode })}
+              >
+                <span className="theme-toggle-knob">{settings.darkMode ? '🌙' : '☀️'}</span>
+              </button>
+            </div>
+          </div>
+
           {/* Models */}
           <div className="settings-section">
             <div className="settings-label">Weather Models</div>
@@ -158,6 +174,7 @@ export function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                 width: '100%', boxSizing: 'border-box', marginTop: 8,
                 padding: '7px 10px', border: '1px solid #E2E8F0', borderRadius: 8,
                 fontSize: 12, fontFamily: 'monospace', outline: 'none',
+                background: 'var(--bg)', color: 'var(--text)',
               }}
               onFocus={e => { e.currentTarget.style.borderColor = '#2563EB' }}
               onBlur={e => { e.currentTarget.style.borderColor = '#E2E8F0' }}

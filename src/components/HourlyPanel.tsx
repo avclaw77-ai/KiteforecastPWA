@@ -1,16 +1,38 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts'
 import { useHourlyForecast } from '../hooks/useHourlyForecast'
-import { windRating, dirLabel, convertSpeed, convertHeight, convertTemp, speedLabel, heightLabel } from '../types'
+import { dirLabel, convertSpeed, convertHeight, convertTemp, speedLabel, heightLabel, sunTimes } from '../types'
 import { tidePeaks as getTidePeaks } from '../api/tide'
 import type { Spot, WindModel, HourForecast, AppSettings } from '../types'
 
+import iconWind from '../assets/icons/wind_direction-24.png'
+import iconTide from '../assets/icons/tide-24.png'
+import iconTemp from '../assets/icons/temperature-24.png'
+import iconPrecip from '../assets/icons/precipitation-24.png'
+import iconSunrise from '../assets/icons/sunrise-16.png'
+import iconSunset from '../assets/icons/sunset-16.png'
+
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+// ── Sunrise / Sunset bar ─────────────────────────────────────────────────────
+function SunBar({ lat, lng, dayOffset }: { lat: number; lng: number; dayOffset: number }) {
+  const { rise, set } = sunTimes(lat, lng, dayOffset)
+  return (
+    <>
+      <span className="sun-bar-item">
+        <img src={iconSunrise} alt="sunrise" className="sun-bar-icon" />{rise}
+      </span>
+      <span className="sun-bar-item">
+        <img src={iconSunset} alt="sunset" className="sun-bar-icon" />{set}
+      </span>
+    </>
+  )
+}
 
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 function ChartTooltip({ active, payload, label }: any) {
@@ -53,47 +75,17 @@ function WindDirStrip({ data, interval }: { data: HourForecast[]; interval?: num
   )
 }
 
-// ── Best kite window ──────────────────────────────────────────────────────────
-function BestWindow({ data }: { data: HourForecast[] }) {
-  let best: { start: number; end: number } | null = null
-  let cur:  { start: number; end: number } | null = null
-
-  data.forEach((d, i) => {
-    if (windRating(d.wind) === 'good') {
-      if (!cur) cur = { start: i, end: i }
-      else cur.end = i
-    } else {
-      if (cur && (!best || cur.end - cur.start > best.end - best.start)) best = cur
-      cur = null
-    }
-  })
-  if (cur && (!best || cur.end - cur.start > best.end - best.start)) best = cur
-  if (!best) return null
-
-  return (
-    <div className="best-window">
-      <span className="best-window-icon">🪁</span>
-      <div>
-        <div className="best-window-title">Best kite window</div>
-        <div className="best-window-detail">
-          {fmtH(best.start)} – {fmtH(Math.min(best.end + 1, 23))}
-          &nbsp;·&nbsp;
-          {best.end - best.start + 1}h of ideal wind
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Section ───────────────────────────────────────────────────────────────────
-function Section({ title, sub, children }: {
-  title: string; sub?: string; children: React.ReactNode
+function Section({ title, sub, icon, right, children }: {
+  title: string; sub?: string; icon?: string; right?: React.ReactNode; children: React.ReactNode
 }) {
   return (
     <div className="section">
       <div className="section-header">
+        {icon && <img src={icon} alt="" className="section-icon" />}
         <span className="section-title">{title}</span>
         {sub && <span className="section-sub">{sub}</span>}
+        {right && <span className="section-header-right">{right}</span>}
       </div>
       {children}
     </div>
@@ -114,7 +106,7 @@ function HourlyTideChart({ data, dayOnly, dayOffset, lat, hu = 'm' }: {
   const maxL = Math.ceil(Math.max(...allLevels) * 2) / 2
 
   return (
-    <Section title="Tide" sub={dayOnly ? `${heightLabel(hu)} · 06:00–19:00` : `${heightLabel(hu)} · hourly`}>
+    <Section title="Tide" icon={iconTide} sub={dayOnly ? `${heightLabel(hu)} · 06:00–19:00` : `${heightLabel(hu)} · hourly`}>
       <ResponsiveContainer width="100%" height={110}>
         <AreaChart data={chartData.map(d => ({ ...d, tide: convertHeight(d.tide, hu) }))} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
           <defs>
@@ -152,8 +144,8 @@ function HourlyTideChart({ data, dayOnly, dayOffset, lat, hu = 'm' }: {
 const DAY_START = 6
 const DAY_END   = 19
 
-function CombinedChart({ data: fullData, windColor, dayOffset, lat, su, hu }: {
-  data: HourForecast[]; windColor: string; dayOffset: number; lat: number
+function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su, hu }: {
+  data: HourForecast[]; windColor: string; dayOffset: number; lat: number; lng: number
   su: 'kts' | 'mph' | 'km/h'; hu: 'm' | 'ft'
 }) {
   const data  = fullData.slice(DAY_START, DAY_END + 1)
@@ -249,7 +241,8 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, su, hu }: {
   const hoverSvgX = hover ? ((hover.pct * (N - 1) + 0.5) / N) * SVG_W : 0
 
   return (
-    <Section title="Wind Speed" sub={`${speedLabel(su)} · ${fmtH(DAY_START)}–${fmtH(DAY_END)}`}>
+    <Section title="Wind Speed" icon={iconWind} sub={`${speedLabel(su)} · ${fmtH(DAY_START)}–${fmtH(DAY_END)}`}
+      right={<SunBar lat={lat} lng={lng} dayOffset={dayOffset} />}>
       <div className="combined-table-wrap">
         {/* Y-axis */}
         <div className="combined-yaxis">
@@ -321,7 +314,7 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, su, hu }: {
             <tr className="combined-tr">
               {data.map((d, i) => (
                 <td key={i} className="combined-td">
-                  {i === 0 && <span className="combined-tr-icon">💨</span>}
+                  {i === 0 && <span className="combined-tr-icon"><img src={iconWind} alt="" className="combined-tr-img" /></span>}
                   <svg width={13} height={13} viewBox="0 0 24 24"
                     style={{ transform: `rotate(${d.dirDeg}deg)` }}>
                     <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="#2563EB" opacity={0.7} />
@@ -340,7 +333,7 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, su, hu }: {
                 const peak = peakHourMap.get(absH)
                 return (
                   <td key={i} className="combined-td">
-                    {i === 0 && <span className="combined-tr-icon">🌊</span>}
+                    {i === 0 && <span className="combined-tr-icon"><img src={iconTide} alt="" className="combined-tr-img" /></span>}
                     {peak ? (
                       <span style={{ fontSize: 8, fontWeight: 700, lineHeight: 1.1,
                         color: peak.type === 'high' ? '#166534' : '#92400E' }}>
@@ -361,7 +354,7 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, su, hu }: {
             <tr className="combined-tr">
               {data.map((d, i) => (
                 <td key={i} className="combined-td">
-                  {i === 0 && <span className="combined-tr-icon">🌧</span>}
+                  {i === 0 && <span className="combined-tr-icon"><img src={iconPrecip} alt="" className="combined-tr-img" /></span>}
                   <span style={{ fontSize: 10, fontWeight: 600, color: '#0EA5E9' }}>
                     {d.rain > 0 ? `${Math.round(d.rain * 10) / 10}` : ''}
                   </span>
@@ -373,7 +366,7 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, su, hu }: {
             <tr className="combined-tr">
               {data.map((d, i) => (
                 <td key={i} className="combined-td">
-                  {i === 0 && <span className="combined-tr-icon">🌡</span>}
+                  {i === 0 && <span className="combined-tr-icon"><img src={iconTemp} alt="" className="combined-tr-img" /></span>}
                   <span style={{ fontSize: 10, fontWeight: 600, color: '#F97316' }}>
                     {Math.round(d.temp)}°
                   </span>
@@ -388,8 +381,8 @@ function CombinedChart({ data: fullData, windColor, dayOffset, lat, su, hu }: {
 }
 
 // ── Split view (original multi-pane) ──────────────────────────────────────────
-function SplitView({ data, windColor, isBlend, dayOffset, lat, su, hu, tu }: {
-  data: HourForecast[]; windColor: string; isBlend: boolean; dayOffset: number; lat: number
+function SplitView({ data, windColor, isBlend, dayOffset, lat, lng, su, hu, tu }: {
+  data: HourForecast[]; windColor: string; isBlend: boolean; dayOffset: number; lat: number; lng: number
   su: 'kts' | 'mph' | 'km/h'; hu: 'm' | 'ft'; tu: '°C' | '°F'
 }) {
   // Daytime window for wind and tide charts
@@ -402,7 +395,8 @@ function SplitView({ data, windColor, isBlend, dayOffset, lat, su, hu, tu }: {
   return (
     <>
       {/* Wind — 06:00 to 19:00 */}
-      <Section title="Wind Speed" sub={`${speedLabel(su)} · 06:00–19:00`}>
+      <Section title="Wind Speed" icon={iconWind} sub={`${speedLabel(su)} · 06:00–19:00`}
+        right={<SunBar lat={lat} lng={lng} dayOffset={dayOffset} />}>
         <ResponsiveContainer width="100%" height={180}>
           <AreaChart data={dayData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
             <defs>
@@ -441,7 +435,7 @@ function SplitView({ data, windColor, isBlend, dayOffset, lat, su, hu, tu }: {
 
       {/* Temp + Rain — full 24h */}
       <div className="two-col">
-        <Section title="Temperature" sub={`${tu} · hourly`}>
+        <Section title="Temperature" icon={iconTemp} sub={`${tu} · hourly`}>
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.map(d => ({ ...d, temp: convertTemp(d.temp, tu) }))} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
@@ -455,7 +449,7 @@ function SplitView({ data, windColor, isBlend, dayOffset, lat, su, hu, tu }: {
           </ResponsiveContainer>
         </Section>
 
-        <Section title="Precipitation" sub="mm · hourly">
+        <Section title="Precipitation" icon={iconPrecip} sub="mm · hourly">
           <ResponsiveContainer width="100%" height={150}>
             <BarChart data={data} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
@@ -478,10 +472,11 @@ interface Props {
   model:     WindModel
   dayOffset: number
   onClose:   () => void
+  onDayChange?: (offset: number) => void
   settings:  AppSettings
 }
 
-export function HourlyPanel({ spot, model, dayOffset, onClose, settings }: Props) {
+export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, settings }: Props) {
   const { data, loading, error } = useHourlyForecast(
     spot.lat, spot.lng, model, dayOffset
   )
@@ -496,35 +491,106 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, settings }: Props
 
   const [viewMode, setViewMode] = useState<'split' | 'combined'>('split')
 
+  // ── Swipe navigation for mobile ──────────────────────────────
+  const touchRef = useRef<{ startX: number; startY: number; startTime: number } | null>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchRef.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      startTime: Date.now(),
+    }
+  }, [])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchRef.current) return
+    const dx = e.changedTouches[0].clientX - touchRef.current.startX
+    const dy = e.changedTouches[0].clientY - touchRef.current.startY
+    const dt = Date.now() - touchRef.current.startTime
+    touchRef.current = null
+
+    // Must be fast (< 400ms), horizontal (|dx| > 2*|dy|), and long enough (> 60px)
+    if (dt < 400 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) {
+      if (dx > 0 && dayOffset > 0) {
+        onDayChange?.(dayOffset - 1)
+      } else if (dx < 0 && dayOffset < 6) {
+        onDayChange?.(dayOffset + 1)
+      }
+    }
+  }, [dayOffset, onDayChange])
+
+  // ── Keyboard navigation for day switching ──────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' && dayOffset > 0) {
+        onDayChange?.(dayOffset - 1)
+      } else if (e.key === 'ArrowRight' && dayOffset < 6) {
+        onDayChange?.(dayOffset + 1)
+      } else if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [dayOffset, onDayChange, onClose])
+
+  // Average wind for kite calc — removed
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal" onClick={e => e.stopPropagation()}
+        ref={modalRef}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
 
         {/* Header */}
         <div className="modal-header">
           <button className="modal-back" onClick={onClose}>←</button>
-          <div>
-            <div className="modal-title">{day} {dateLabel} · Hourly forecast</div>
-            <div className="modal-subtitle">
-              {spot.name}&nbsp;·&nbsp;
-              <span style={{ color: windColor, fontWeight: 600 }}>
-                {isBlend ? '⊕ BLEND' : model}
-              </span>
+
+          {/* Day navigation */}
+          <div className="day-nav">
+            <button
+              className="day-nav-btn"
+              disabled={dayOffset <= 0}
+              onClick={() => onDayChange?.(dayOffset - 1)}
+            >
+              ‹
+            </button>
+            <div>
+              <div className="modal-title">{day} {dateLabel} · Hourly forecast</div>
+              <div className="modal-subtitle">
+                {spot.name}&nbsp;·&nbsp;
+                <span style={{ color: windColor, fontWeight: 600 }}>
+                  {isBlend ? '⊕ BLEND' : model}
+                </span>
+              </div>
             </div>
+            <button
+              className="day-nav-btn"
+              disabled={dayOffset >= 6}
+              onClick={() => onDayChange?.(dayOffset + 1)}
+            >
+              ›
+            </button>
           </div>
-          <div className="view-toggle">
-            <button
-              className={['view-toggle-btn', viewMode === 'split' ? 'view-toggle-btn--active' : ''].join(' ')}
-              onClick={() => setViewMode('split')}
-            >
-              Split
-            </button>
-            <button
-              className={['view-toggle-btn', viewMode === 'combined' ? 'view-toggle-btn--active' : ''].join(' ')}
-              onClick={() => setViewMode('combined')}
-            >
-              Combo
-            </button>
+
+          <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', alignItems: 'center' }}>
+            <div className="view-toggle">
+              <button
+                className={['view-toggle-btn', viewMode === 'split' ? 'view-toggle-btn--active' : ''].join(' ')}
+                onClick={() => setViewMode('split')}
+              >
+                Split
+              </button>
+              <button
+                className={['view-toggle-btn', viewMode === 'combined' ? 'view-toggle-btn--active' : ''].join(' ')}
+                onClick={() => setViewMode('combined')}
+              >
+                Combo
+              </button>
+            </div>
           </div>
         </div>
 
@@ -535,11 +601,10 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, settings }: Props
         ) : (
           <>
             {viewMode === 'combined' ? (
-              <CombinedChart data={data} windColor={windColor} dayOffset={dayOffset} lat={spot.lat} su={su} hu={hu} />
+              <CombinedChart data={data} windColor={windColor} dayOffset={dayOffset} lat={spot.lat} lng={spot.lng} su={su} hu={hu} />
             ) : (
-              <SplitView data={data} windColor={windColor} isBlend={isBlend} dayOffset={dayOffset} lat={spot.lat} su={su} hu={hu} tu={tu} />
+              <SplitView data={data} windColor={windColor} isBlend={isBlend} dayOffset={dayOffset} lat={spot.lat} lng={spot.lng} su={su} hu={hu} tu={tu} />
             )}
-            <BestWindow data={data} />
           </>
         )}
       </div>

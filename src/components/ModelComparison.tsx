@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
@@ -44,20 +45,24 @@ export function ModelComparison({ spot, settings }: Props) {
     GFS: gfs, ECMWF: ecmwf, ICON: icon, MF: mf, GEM: gem,
   }
 
-  // Build chart data: one entry per day with wind per model
+  // Build chart data: one entry per day with wind per model (memoized)
   const days = gfs.length || ecmwf.length || icon.length || mf.length || gem.length || 0
-  if (days === 0) return null
+  
+  const chartData = useMemo(() => {
+    if (days === 0) return []
+    return Array.from({ length: days }, (_, i) => {
+      const entry: Record<string, any> = {
+        day: gfs[i]?.day || ecmwf[i]?.day || icon[i]?.day || mf[i]?.day || gem[i]?.day || '',
+      }
+      for (const m of visibleModels) {
+        const raw = allData[m]?.[i]?.wind
+        entry[m] = raw != null ? convertSpeed(raw, su) : null
+      }
+      return entry
+    })
+  }, [days, gfs, ecmwf, icon, mf, gem, visibleModels, su])
 
-  const chartData = Array.from({ length: days }, (_, i) => {
-    const entry: Record<string, any> = {
-      day: gfs[i]?.day || ecmwf[i]?.day || icon[i]?.day || mf[i]?.day || gem[i]?.day || '',
-    }
-    for (const m of visibleModels) {
-      const raw = allData[m]?.[i]?.wind
-      entry[m] = raw != null ? convertSpeed(raw, su) : null
-    }
-    return entry
-  })
+  if (chartData.length === 0) return null
 
   // Custom tooltip
   function ChartTooltip({ active, payload, label }: any) {

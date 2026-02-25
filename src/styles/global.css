@@ -19,6 +19,42 @@
   color: var(--text);
 }
 
+/* ── Dark mode ──────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:           #0F172A;
+  --panel:        #1E293B;
+  --border:       #334155;
+  --text:         #F1F5F9;
+  --muted:        #94A3B8;
+  --accent:       #60A5FA;
+  --accent-light: #1E3A5F;
+}
+[data-theme="dark"] body { background: var(--bg); }
+[data-theme="dark"] .chart-tooltip,
+[data-theme="dark"] .combined-tooltip { background: #1E293B; border-color: #475569; color: #F1F5F9; }
+[data-theme="dark"] .settings-panel { background: #1E293B; }
+[data-theme="dark"] .day-card { background: var(--panel); }
+[data-theme="dark"] .section { background: var(--panel); }
+[data-theme="dark"] .best-window { background: #064E3B; border-color: #065F46; }
+[data-theme="dark"] .best-window-title { color: #6EE7B7; }
+[data-theme="dark"] .best-window-detail { color: #A7F3D0; }
+
+/* ── Gust warning ───────────────────────────────────────────────────────────── */
+.gust-warning        { background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+.gust-warning-icon   { font-size: 18px; }
+.gust-warning-title  { font-size: 12px; font-weight: 700; color: #92400E; }
+.gust-warning-detail { font-size: 12px; color: #B45309; }
+[data-theme="dark"] .gust-warning { background: #451A03; border-color: #92400E; }
+[data-theme="dark"] .gust-warning-title { color: #FCD34D; }
+[data-theme="dark"] .gust-warning-detail { color: #FDE68A; }
+[data-theme="dark"] .add-spot-btn { background: var(--accent-light); border-color: var(--accent); }
+[data-theme="dark"] .skeleton { background: linear-gradient(90deg, #1E293B 25%, #334155 50%, #1E293B 75%); background-size: 200% 100%; }
+[data-theme="dark"] .modal { background: var(--bg); }
+[data-theme="dark"] .error-banner { background: #450A0A; border-color: #7F1D1D; color: #FCA5A5; }
+[data-theme="dark"] .spot-list-input { background: #0F172A; border-color: #475569; color: #F1F5F9; }
+[data-theme="dark"] .spot-list-row:hover { background: #1E3A5F; }
+[data-theme="dark"] .model-btn--blend { border-color: #6366F1; background: #312E81; }
+
 body { background: var(--bg); }
 
 /* ── Title bar ───────────────────────────────────────────────────────────────── */
@@ -51,6 +87,11 @@ body { background: var(--bg); }
   font-size: 18px;
   line-height: 1;
 }
+.titlebar-logo-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
 .titlebar-title {
   font-size: 15px;
   font-weight: 700;
@@ -71,6 +112,14 @@ body { background: var(--bg); }
 .titlebar-nav      { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .titlebar-divider  { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
 .no-drag           { -webkit-app-region: no-drag; }
+.settings-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--panel);
+  cursor: pointer; font-size: 16px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s; flex-shrink: 0;
+}
+.settings-btn:hover { background: var(--accent-light); color: var(--accent); }
 
 /* ── Model buttons ───────────────────────────────────────────────────────────── */
 .model-btn {
@@ -162,6 +211,9 @@ body { background: var(--bg); }
 .day-card-agreement--moderate { color: #F59E0B; }
 .day-card-agreement--low      { color: #EF4444; }
 .day-card-hint   { font-size: 9px; color: var(--muted); margin-top: 8px; }
+.day-card-sun    { display: flex; gap: 6px; justify-content: center; margin-top: 5px; }
+.day-card-sun-item { display: flex; align-items: center; gap: 2px; font-size: 9px; color: var(--muted); }
+.day-card-sun-icon { width: 12px; height: 12px; object-fit: contain; }
 
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
@@ -174,7 +226,11 @@ body { background: var(--bg); }
 
 /* ── Section ─────────────────────────────────────────────────────────────────── */
 .section        { background: var(--panel); border-radius: 12px; border: 1px solid var(--border); padding: 14px 16px; }
-.section-header { display: flex; align-items: baseline; gap: 6px; margin-bottom: 12px; }
+.section-header { display: flex; align-items: baseline; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.section-header-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.section-icon   { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; align-self: center; }
+.sun-bar-item   { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); font-weight: 500; }
+.sun-bar-icon   { width: 16px; height: 16px; object-fit: contain; }
 .section-title  { font-size: 13px; font-weight: 700; }
 .section-sub    { font-size: 11px; color: var(--muted); }
 
@@ -317,6 +373,7 @@ body { background: var(--bg); }
   height: 100vh; background: var(--bg); gap: 12px;
 }
 .loading-icon  { font-size: 40px; animation: bounce 1.2s infinite; }
+.loading-icon-img { width: 48px; height: 48px; object-fit: contain; animation: bounce 1.2s infinite; }
 .loading-text  { font-size: 14px; color: var(--muted); font-weight: 500; }
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
@@ -458,6 +515,9 @@ body { background: var(--bg); }
   position: absolute; left: -22px; top: 50%; transform: translateY(-50%);
   font-size: 11px;
 }
+.combined-tr-img {
+  width: 16px; height: 16px; object-fit: contain; display: block;
+}
 
 /* Combined chart tooltip */
 .combined-tooltip {
@@ -557,6 +617,8 @@ body { background: var(--bg); }
     flex-shrink: 0;
     max-height: 56px;
   }
+  .sidebar-footer { padding: 6px 10px; border-top: none; flex-shrink: 0; }
+  .add-spot-btn { padding: 5px 10px; font-size: 11px; white-space: nowrap; }
   .sidebar-label {
     padding: 8px 10px;
     white-space: nowrap;
@@ -662,4 +724,147 @@ body { background: var(--bg); }
   .day-card { min-width: 80px; }
   .view-toggle-btn { padding: 4px 10px; font-size: 10px; }
 }
+
+/* ── Sunrise/Sunset strip ───────────────────────────────────────────────────── */
+.sun-strip {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; padding: 6px 12px;
+  background: var(--panel); border-radius: 8px; border: 1px solid var(--border);
+  font-size: 11px; color: var(--muted);
+}
+.sun-strip-item { display: flex; align-items: center; gap: 4px; }
+.sun-strip-icon { font-size: 13px; }
+.sun-strip-time { font-weight: 600; color: var(--text); }
+.sun-strip-label { font-size: 10px; }
+.sun-strip-daylight { font-weight: 600; color: var(--accent); }
+
+/* ── Kite size calculator ───────────────────────────────────────────────────── */
+.kite-calc {
+  background: var(--panel); border-radius: 12px; border: 1px solid var(--border);
+  padding: 14px 16px;
+}
+.kite-calc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.kite-calc-title { font-size: 13px; font-weight: 700; }
+.kite-calc-sub { font-size: 11px; color: var(--muted); }
+.kite-calc-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.kite-calc-input {
+  width: 70px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; text-align: center; outline: none; background: var(--bg); color: var(--text);
+}
+.kite-calc-input:focus { border-color: var(--accent); }
+.kite-calc-label { font-size: 11px; color: var(--muted); }
+.kite-calc-result {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  background: linear-gradient(135deg, #EFF4FF, #F0FDF4); border-radius: 10px;
+}
+[data-theme="dark"] .kite-calc-result { background: linear-gradient(135deg, #1E3A5F, #064E3B); }
+.kite-calc-size { font-size: 28px; font-weight: 800; color: var(--accent); }
+.kite-calc-unit { font-size: 12px; color: var(--muted); font-weight: 600; }
+.kite-calc-range { font-size: 11px; color: var(--muted); }
+.kite-calc-note { font-size: 10px; color: var(--muted); margin-top: 8px; font-style: italic; }
+
+/* ── Share forecast button ──────────────────────────────────────────────────── */
+.share-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--panel);
+  color: var(--muted); font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.share-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+.share-btn--copied { background: #DCFCE7; color: #166534; border-color: #86EFAC; }
+
+/* ── Day navigation (swipe arrows in hourly modal) ──────────────────────────── */
+.day-nav {
+  display: flex; align-items: center; gap: 8px;
+}
+.day-nav-btn {
+  width: 28px; height: 28px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--panel);
+  cursor: pointer; font-size: 14px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.day-nav-btn:hover { background: var(--accent-light); color: var(--accent); }
+.day-nav-btn:disabled { opacity: 0.3; cursor: default; }
+.day-nav-btn:disabled:hover { background: var(--panel); color: var(--muted); }
+
+/* ── Theme toggle ───────────────────────────────────────────────────────────── */
+.theme-toggle {
+  width: 40px; height: 22px; border-radius: 11px;
+  background: #E2E8F0; border: none; cursor: pointer;
+  position: relative; transition: background .2s;
+  flex-shrink: 0;
+}
+.theme-toggle--dark { background: #475569; }
+.theme-toggle-knob {
+  position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: white; transition: transform .2s;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+}
+.theme-toggle--dark .theme-toggle-knob { transform: translateX(18px); }
+
+/* ── Pull to refresh indicator ──────────────────────────────────────────────── */
+.ptr-indicator {
+  text-align: center; padding: 8px; font-size: 11px;
+  color: var(--accent); font-weight: 600;
+  animation: ptr-fade .5s ease-out;
+}
+@keyframes ptr-fade {
+  0% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Wind quality hours indicator on day cards ──────────────────────────────── */
+.day-card-hours {
+  display: flex; gap: 2px; justify-content: center; margin-top: 4px;
+}
+.day-card-hours-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--border);
+  transition: background .2s;
+}
+.day-card-hours-dot--good { background: var(--good); }
+.day-card-hours-dot--ok { background: var(--ok); }
+
+/* ── Spin animation for refresh button ──────────────────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Best Day badge ─────────────────────────────────────────────────────────── */
+.best-day-badge {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, #10B981, #059669); color: white;
+  font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+  white-space: nowrap; z-index: 2; box-shadow: 0 2px 6px rgba(16, 185, 129, .3);
+  letter-spacing: .02em;
+}
+
+/* ── Wind trend bar ─────────────────────────────────────────────────────────── */
+.wind-trend-bar {
+  display: flex; align-items: center; justify-content: center;
+  padding: 6px 12px; font-size: 11px; color: var(--muted);
+}
+.wind-trend-label {
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* ── Swipe hint for mobile hourly panel ─────────────────────────────────────── */
+.swipe-hint {
+  text-align: center; font-size: 10px; color: var(--muted);
+  padding: 4px 0 8px; opacity: 0.6;
+}
+
+/* ── Forecast summary ───────────────────────────────────────────────────────── */
+.forecast-summary {
+  font-size: 13px; color: var(--text); padding: 10px 14px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; font-weight: 500; line-height: 1.4;
+}
+[data-theme="dark"] .forecast-summary { background: var(--panel); }
+[data-theme="dark"] .best-day-badge { box-shadow: 0 2px 6px rgba(0,0,0,.3); }
 

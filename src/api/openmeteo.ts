@@ -33,6 +33,10 @@ const dailyCache  = new Map<string, { ts: number; data: DayForecast[] }>()
 const hourlyCache = new Map<string, { ts: number; data: HourForecast[] }>()
 const CACHE_TTL   = 15 * 60 * 1000
 
+// In-flight dedup: prevent duplicate API calls for same model+coords
+const dailyInflight  = new Map<string, Promise<DayForecast[]>>()
+const hourlyInflight = new Map<string, Promise<HourForecast[]>>()
+
 function ck(...p: (string | number)[]): string { return p.join('|') }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -195,45 +199,55 @@ export async function fetchDailyForecast(
   const hit = dailyCache.get(k)
   if (hit && Date.now() - hit.ts < CACHE_TTL) return hit.data
 
+  // In-flight dedup
+  const existing = dailyInflight.get(k)
+  if (existing) return existing
+
   const base = MODEL_URL[model]
   if (!base) throw new Error(`Unknown model: ${model}`)
 
-  const url = new URL(base)
-  url.searchParams.set('latitude',      String(lat))
-  url.searchParams.set('longitude',     String(lng))
-  url.searchParams.set('daily',
-    'wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,temperature_2m_max,precipitation_sum')
-  url.searchParams.set('timezone',      'auto')
-  url.searchParams.set('forecast_days', '7')
+  const promise = (async () => {
+    const url = new URL(base)
+    url.searchParams.set('latitude',      String(lat))
+    url.searchParams.set('longitude',     String(lng))
+    url.searchParams.set('daily',
+      'wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,temperature_2m_max,precipitation_sum')
+    url.searchParams.set('timezone',      'auto')
+    url.searchParams.set('forecast_days', '7')
 
-  const res  = await fetch(url.toString())
-  if (!res.ok) throw new Error(`${model}: ${res.status}`)
-  const json = await res.json()
-  const d    = json.daily ?? {}
+    const res  = await fetch(url.toString())
+    if (!res.ok) throw new Error(`${model}: ${res.status}`)
+    const json = await res.json()
+    const d    = json.daily ?? {}
 
-  const time = d.time                          ?? []
-  const ws   = d.wind_speed_10m_max            ?? d.windspeed_10m_max          ?? []
-  const wg   = d.wind_gusts_10m_max            ?? d.windgusts_10m_max          ?? []
-  const wd   = d.wind_direction_10m_dominant    ?? d.winddirection_10m_dominant ?? []
-  const t2   = d.temperature_2m_max            ?? []
-  const pr   = d.precipitation_sum             ?? []
+    const time = d.time                          ?? []
+    const ws   = d.wind_speed_10m_max            ?? d.windspeed_10m_max          ?? []
+    const wg   = d.wind_gusts_10m_max            ?? d.windgusts_10m_max          ?? []
+    const wd   = d.wind_direction_10m_dominant    ?? d.winddirection_10m_dominant ?? []
+    const t2   = d.temperature_2m_max            ?? []
+    const pr   = d.precipitation_sum             ?? []
 
-  const data: DayForecast[] = time.map((date: string, i: number) => ({
-    day:       DAY_NAMES[new Date(date + 'T00:00:00').getDay()],
-    date,
-    wind:      Math.round((ws[i] ?? 0) * KMH_TO_KTS),
-    gust:      Math.round((wg[i] ?? 0) * KMH_TO_KTS),
-    dirDeg:    wd[i] ?? 0,
-    temp:      Math.round(t2[i] ?? 0),
-    rain:      Math.round((pr[i] ?? 0) * 10) / 10,
-    cloud:     0,
-    tideHigh:  0,    // legacy fields — peaks now computed from tideAt()
-    tideLow:   0,
-    tideRange: 0,
-  }))
+    const data: DayForecast[] = time.map((date: string, i: number) => ({
+      day:       DAY_NAMES[new Date(date + 'T00:00:00').getDay()],
+      date,
+      wind:      Math.round((ws[i] ?? 0) * KMH_TO_KTS),
+      gust:      Math.round((wg[i] ?? 0) * KMH_TO_KTS),
+      dirDeg:    wd[i] ?? 0,
+      temp:      Math.round(t2[i] ?? 0),
+      rain:      Math.round((pr[i] ?? 0) * 10) / 10,
+      cloud:     0,
+      tideHigh:  0,
+      tideLow:   0,
+      tideRange: 0,
+    }))
 
-  dailyCache.set(k, { ts: Date.now(), data })
-  return data
+    dailyCache.set(k, { ts: Date.now(), data })
+    return data
+  })()
+
+  dailyInflight.set(k, promise)
+  promise.finally(() => dailyInflight.delete(k))
+  return promise
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -292,41 +306,51 @@ export async function fetchHourlyForecast(
   const hit = hourlyCache.get(k)
   if (hit && Date.now() - hit.ts < CACHE_TTL) return hit.data
 
+  // In-flight dedup
+  const existing = hourlyInflight.get(k)
+  if (existing) return existing
+
   const base = MODEL_URL[model]
   if (!base) throw new Error(`Unknown model: ${model}`)
 
-  const url = new URL(base)
-  url.searchParams.set('latitude',      String(lat))
-  url.searchParams.set('longitude',     String(lng))
-  url.searchParams.set('hourly',
-    'wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation')
-  url.searchParams.set('timezone',      'auto')
-  url.searchParams.set('forecast_days', '7')
+  const promise = (async () => {
+    const url = new URL(base)
+    url.searchParams.set('latitude',      String(lat))
+    url.searchParams.set('longitude',     String(lng))
+    url.searchParams.set('hourly',
+      'wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation')
+    url.searchParams.set('timezone',      'auto')
+    url.searchParams.set('forecast_days', '7')
 
-  const res  = await fetch(url.toString())
-  if (!res.ok) throw new Error(`${model}: ${res.status}`)
-  const json = await res.json()
-  const h    = json.hourly ?? {}
+    const res  = await fetch(url.toString())
+    if (!res.ok) throw new Error(`${model}: ${res.status}`)
+    const json = await res.json()
+    const h    = json.hourly ?? {}
 
-  const ws = h.wind_speed_10m     ?? h.windspeed_10m      ?? []
-  const wg = h.wind_gusts_10m     ?? h.windgusts_10m      ?? []
-  const wd = h.wind_direction_10m ?? h.winddirection_10m  ?? []
-  const t2 = h.temperature_2m     ?? []
-  const pr = h.precipitation      ?? []
+    const ws = h.wind_speed_10m     ?? h.windspeed_10m      ?? []
+    const wg = h.wind_gusts_10m     ?? h.windgusts_10m      ?? []
+    const wd = h.wind_direction_10m ?? h.winddirection_10m  ?? []
+    const t2 = h.temperature_2m     ?? []
+    const pr = h.precipitation      ?? []
 
-  const s  = dayOff * 24
-  const data: HourForecast[] = Array.from({ length: 24 }, (_, i) => ({
-    hour:   `${String(i).padStart(2, '0')}:00`,
-    wind:   Math.round((ws[s + i] ?? 0) * KMH_TO_KTS),
-    gust:   Math.round((wg[s + i] ?? 0) * KMH_TO_KTS),
-    dirDeg: wd[s + i] ?? 0,
-    temp:   t2[s + i] ?? 0,
-    rain:   pr[s + i] ?? 0,
-    tide:   tideAt(dayOff, i, lat),
-  }))
+    const s  = dayOff * 24
+    const data: HourForecast[] = Array.from({ length: 24 }, (_, i) => ({
+      hour:   `${String(i).padStart(2, '0')}:00`,
+      wind:   Math.round((ws[s + i] ?? 0) * KMH_TO_KTS),
+      gust:   Math.round((wg[s + i] ?? 0) * KMH_TO_KTS),
+      dirDeg: wd[s + i] ?? 0,
+      temp:   t2[s + i] ?? 0,
+      rain:   pr[s + i] ?? 0,
+      tide:   tideAt(dayOff, i, lat),
+    }))
 
-  hourlyCache.set(k, { ts: Date.now(), data })
-  return data
+    hourlyCache.set(k, { ts: Date.now(), data })
+    return data
+  })()
+
+  hourlyInflight.set(k, promise)
+  promise.finally(() => hourlyInflight.delete(k))
+  return promise
 }
 
 // ── Cache control ────────────────────────────────────────────────────────────

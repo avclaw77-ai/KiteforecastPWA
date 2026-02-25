@@ -11,6 +11,11 @@ import { windRating, ratingColor, dirLabel,
 import { tideAt, tidePeaks }                 from '../api/tide'
 import type { Spot, WindModel, DayForecast, AppSettings } from '../types'
 
+import iconWind from '../assets/icons/wind_direction-24.png'
+import iconTide from '../assets/icons/tide-24.png'
+import iconTemp from '../assets/icons/temperature-24.png'
+import iconPrecip from '../assets/icons/precipitation-24.png'
+
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
@@ -21,8 +26,8 @@ function ChartTooltip({ active, payload, label }: any) {
         <div key={i} style={{ color: p.color }}>
           {p.name}:{' '}
           <strong>
-            {p.value}
-            {p.name === 'Rain' ? 'mm' : p.name === 'Temp' ? '°C' : p.name === 'Dir' ? '°' : ' kts'}
+            {typeof p.value === 'number' ? Math.round(p.value * 10) / 10 : p.value}
+            {p.name === 'Rain' ? ' mm' : p.name === 'Dir' ? '°' : ''}
           </strong>
         </div>
       ))}
@@ -80,12 +85,13 @@ function WindArrow({ deg, size = 18 }: { deg: number; size?: number }) {
 }
 
 // ── Section ───────────────────────────────────────────────────────────────────
-function Section({ title, sub, children }: {
-  title: string; sub?: string; children: React.ReactNode
+function Section({ title, sub, icon, children }: {
+  title: string; sub?: string; icon?: string; children: React.ReactNode
 }) {
   return (
     <div className="section">
       <div className="section-header">
+        {icon && <img src={icon} alt="" className="section-icon" />}
         <span className="section-title">{title}</span>
         {sub && <span className="section-sub">{sub}</span>}
       </div>
@@ -168,7 +174,6 @@ function DayCard({ d, isBlend, onClick, speedUnit = 'kts' }: {
   const wind = convertSpeed(d.wind, speedUnit)
   const gust = convertSpeed(d.gust, speedUnit)
   const color = ratingColor(windRating(d.wind))
-  // Format date as "Feb 24"
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   const dt = d.date ? new Date(d.date + 'T00:00:00') : null
   const dateLabel = dt ? `${MONTHS[dt.getMonth()]} ${dt.getDate()}` : ''
@@ -292,15 +297,17 @@ export function ForecastView({
           {Array.from({ length: 7 }, (_, i) => <SkeletonBar key={i} h={120} />)}
         </div>
       ) : (
-        <div className="day-strip">
-          {data.map((d, i) => (
-            <DayCard key={i} d={d} isBlend={isBlend} onClick={() => onDayClick(i)} speedUnit={su} />
-          ))}
-        </div>
+        <>
+          <div className="day-strip">
+            {data.map((d, i) => (
+              <DayCard key={i} d={d} isBlend={isBlend} onClick={() => onDayClick(i)} speedUnit={su} />
+            ))}
+          </div>
+        </>
       )}
 
       {/* Wind chart */}
-      <Section title="Wind Speed" sub={`${speedLabel(su)} · avg vs gust`}>
+      <Section title="Wind Speed" icon={iconWind} sub={`${speedLabel(su)} · avg vs gust`}>
         {loading ? <SkeletonBar h={180} /> : (
           <>
             <ResponsiveContainer width="100%" height={180}>
@@ -329,7 +336,7 @@ export function ForecastView({
       </Section>
 
       {/* Tide */}
-      <Section title="Tide" sub={`${heightLabel(hu)} · 7-day cycle`}>
+      <Section title="Tide" icon={iconTide} sub={`${heightLabel(hu)} · 7-day cycle`}>
         {loading ? <SkeletonBar h={120} /> : (
           <>
             <TideChart data={data} lat={spot.lat} heightUnit={hu} />
@@ -357,7 +364,7 @@ export function ForecastView({
 
       {/* Temp + Rain */}
       <div className="two-col">
-        <Section title="Temperature" sub={tu}>
+        <Section title="Temperature" icon={iconTemp} sub={tu}>
           {loading ? <SkeletonBar h={140} /> : (
             <ResponsiveContainer width="100%" height={140}>
               <LineChart data={data.map(d => ({ ...d, temp: convertTemp(d.temp, tu) }))} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
@@ -372,7 +379,7 @@ export function ForecastView({
           )}
         </Section>
 
-        <Section title="Precipitation" sub="mm">
+        <Section title="Precipitation" icon={iconPrecip} sub="mm">
           {loading ? <SkeletonBar h={140} /> : (
             <ResponsiveContainer width="100%" height={140}>
               <BarChart data={data} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>

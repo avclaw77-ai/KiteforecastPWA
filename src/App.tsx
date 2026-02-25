@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import logoImg from "./assets/icons/logo-32.png"
+import { useState, useEffect, useCallback } from 'react'
 import { Sidebar }        from './components/Sidebar'
 import { TitleBar }       from './components/TitleBar'
 import { ForecastView }   from './components/ForecastView'
@@ -8,6 +9,7 @@ import { SettingsPanel }  from './components/SettingsPanel'
 import { useSpots }       from './hooks/useSpots'
 import { useSettings }    from './hooks/useSettings'
 import { setStormGlassKey, fetchTideData } from './api/tide'
+import { clearForecastCache } from './api/openmeteo'
 import type { WindModel, Spot } from './types'
 import './styles/global.css'
 
@@ -21,6 +23,8 @@ export default function App() {
   const [showAdd,      setShowAdd]      = useState(false)
   const [showMapView,  setShowMapView]  = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [refreshing,   setRefreshing]   = useState(false)
+  const [lastRefresh,  setLastRefresh]  = useState<Date>(new Date())
 
   // Auto-select first spot when spots load
   useEffect(() => {
@@ -34,6 +38,11 @@ export default function App() {
     setStormGlassKey(settings.stormGlassKey)
   }, [settings.stormGlassKey])
 
+  // Sync dark mode
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', settings.darkMode ? 'dark' : 'light')
+  }, [settings.darkMode])
+
   const selSpot: Spot | undefined =
     spots.find(s => s.id === selId) ?? spots[0]
 
@@ -41,6 +50,28 @@ export default function App() {
   useEffect(() => {
     if (selSpot) fetchTideData(selSpot.lat, selSpot.lng)
   }, [selSpot?.id, settings.stormGlassKey])
+
+  // ── Pull-to-refresh ──────────────────────────────────────────────────
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true)
+    clearForecastCache()
+    setLastRefresh(new Date())
+    // Also re-fetch tide
+    if (selSpot) fetchTideData(selSpot.lat, selSpot.lng)
+    setTimeout(() => setRefreshing(false), 800)
+  }, [selSpot])
+
+  // Keyboard shortcut: Cmd/Ctrl + R to refresh data
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
+        e.preventDefault()
+        handleRefresh()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [handleRefresh])
 
   async function handleAddSpot(spot: Spot) {
     await addSpot(spot)
@@ -59,8 +90,8 @@ export default function App() {
   if (loading) {
     return (
       <div className="loading-screen">
-        <div className="loading-icon">🪁</div>
-        <div className="loading-text">Loading KiteForecast…</div>
+        <img src={logoImg} alt="myWind" className="loading-icon-img" />
+        <div className="loading-text">Loading myWind…</div>
       </div>
     )
   }
@@ -76,6 +107,9 @@ export default function App() {
         onToggleMap={() => setShowMapView(v => !v)}
         enabledModels={settings.enabledModels}
         onSettingsClick={() => setShowSettings(true)}
+        darkMode={settings.darkMode}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -90,8 +124,12 @@ export default function App() {
         />
 
         <main className="flex-1 overflow-auto">
+          {refreshing && (
+            <div className="ptr-indicator">↻ Refreshing forecast…</div>
+          )}
           {selSpot ? (
             <ForecastView
+              key={lastRefresh.getTime()}
               spot={selSpot}
               model={model}
               mapView={showMapView}
@@ -120,6 +158,7 @@ export default function App() {
           model={model}
           dayOffset={selDay}
           onClose={() => setSelDay(null)}
+          onDayChange={setSelDay}
           settings={settings}
         />
       )}
