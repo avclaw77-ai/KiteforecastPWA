@@ -138,6 +138,13 @@ export function dirLabel(deg: number): string {
   return dirs[Math.round(deg / 45) % 8]
 }
 
+// ── Chart color palette (Recharts needs string props, not CSS vars) ──────────
+export function chartColors(dark: boolean) {
+  return dark
+    ? { grid: '#334155', label: '#94A3B8', tooltipBg: '#1E293B', tooltipBorder: '#475569', tooltipText: '#F1F5F9' }
+    : { grid: '#E8EDF3', label: '#64748B', tooltipBg: '#FFFFFF', tooltipBorder: '#E2E8F0', tooltipText: '#1A202C' }
+}
+
 // ── Shared date constants ────────────────────────────────────────────────────
 export const DAY_NAMES  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
 export const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] as const

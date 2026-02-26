@@ -73,12 +73,13 @@ export const TitleBar = memo(function TitleBar({
               className="settings-btn no-drag"
               onClick={onRefresh}
               title="Refresh forecast data"
+              aria-label="Refresh forecast"
               style={refreshing ? { animation: 'spin .8s linear infinite' } : undefined}
             >
               ↻
             </button>
           )}
-          <button className="settings-btn no-drag" onClick={onSettingsClick}>
+          <button className="settings-btn no-drag" onClick={onSettingsClick} aria-label="Settings">
             ⚙︎
           </button>
         </div>

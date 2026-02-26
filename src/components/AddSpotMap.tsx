@@ -288,7 +288,7 @@ export function AddSpotMap({ mySpotIds, onAdd, onClose }: Props) {
       <div className="add-spot-modal" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="modal-header" style={{ padding: '14px 20px', background: '#fff', borderBottom: '1px solid #E8EDF3', flexShrink: 0 }}>
+        <div className="modal-header" style={{ padding: '14px 20px', background: 'var(--panel)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <button className="modal-back" onClick={onClose}>✕</button>
           <div>
             <div className="modal-title">Add a Kitespot</div>

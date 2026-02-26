@@ -7,8 +7,8 @@ import type { Spot, WindModel }            from '../types'
 const MiniArrow = memo(function MiniArrow({ deg }: { deg: number }) {
   return (
     <svg width={14} height={14} viewBox="0 0 24 24"
-      style={{ transform: `rotate(${deg}deg)`, opacity: 0.6, flexShrink: 0 }}>
-      <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="#64748B" />
+      style={{ transform: `rotate(${deg}deg)`, opacity: 0.6, flexShrink: 0, color: 'var(--muted)' }}>
+      <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="currentColor" />
     </svg>
   )
 })
