@@ -184,7 +184,6 @@ export function ForecastView({
   const isBlend   = model === 'BLEND'
   const windColor = isBlend ? '#6366F1' : '#2563EB'
   const su = settings.speedUnit
-  const hu = settings.heightUnit
   const tu = settings.tempUnit
 
   const windChartData = useMemo(

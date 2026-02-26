@@ -138,15 +138,19 @@ export function dirLabel(deg: number): string {
   return dirs[Math.round(deg / 45) % 8]
 }
 
+// ── Shared date constants ────────────────────────────────────────────────────
+export const DAY_NAMES  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
+export const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] as const
+
 // ── Window type augmentation (Electron — optional in web builds) ─────────────
 declare global {
   interface Window {
     electronAPI?: {
       spots: {
-        get: () => Promise<any[]>
-        add: (s: any) => Promise<any[]>
-        remove: (id: string) => Promise<any[]>
-        reorder: (ids: string[]) => Promise<any[]>
+        get: () => Promise<Spot[]>
+        add: (s: Spot) => Promise<Spot[]>
+        remove: (id: string) => Promise<Spot[]>
+        reorder: (ids: string[]) => Promise<Spot[]>
       }
     }
   }

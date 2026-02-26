@@ -220,14 +220,11 @@ function interpolateFromExtremes(extremes: CachedExtreme[]): { absHour: number; 
 export function tideAt(dayOffset: number, hour: number, lat: number): number {
   const cache = ensureCache(lat)
   if (cache && cache.seaLevels.length > 0) {
+    // seaLevels is indexed by integer absHour (0–167), so direct O(1) lookup
     const target = dayOffset * 24 + hour
-    let best = cache.seaLevels[0]
-    let bestDist = Math.abs(best.absHour - target)
-    for (const sl of cache.seaLevels) {
-      const d = Math.abs(sl.absHour - target)
-      if (d < bestDist) { best = sl; bestDist = d }
+    if (target >= 0 && target < cache.seaLevels.length) {
+      return cache.seaLevels[target].level
     }
-    if (bestDist <= 1.5) return best.level
   }
   return +tideRaw(dayOffset, hour, lat).toFixed(2)
 }

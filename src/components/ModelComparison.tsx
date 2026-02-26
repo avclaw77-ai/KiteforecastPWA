@@ -3,9 +3,9 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { useForecast }                      from '../hooks/useForecast'
+import { useMultiModelForecast }             from '../hooks/useMultiModelForecast'
 import { BASE_MODELS, convertSpeed, speedLabel } from '../types'
-import type { Spot, WindModel, DayForecast, AppSettings } from '../types'
+import type { Spot, WindModel, AppSettings } from '../types'
 
 // ── Distinct color per model ─────────────────────────────────────────────────
 const MODEL_COLORS: Record<string, string> = {
@@ -14,12 +14,6 @@ const MODEL_COLORS: Record<string, string> = {
   ICON:  '#F59E0B',  // amber
   MF:    '#8B5CF6',  // violet
   GEM:   '#EF4444',  // red
-}
-
-// ── Single model data hook ───────────────────────────────────────────────────
-function useModelData(lat: number, lng: number, model: WindModel) {
-  const { data } = useForecast(lat, lng, model)
-  return data
 }
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -55,33 +49,26 @@ export const ModelComparison = memo(function ModelComparison({ spot, settings }:
     [settings.enabledModels]
   )
 
-  // Fetch all base models in parallel
-  const gfs   = useModelData(spot.lat, spot.lng, 'GFS')
-  const ecmwf = useModelData(spot.lat, spot.lng, 'ECMWF')
-  const icon  = useModelData(spot.lat, spot.lng, 'ICON')
-  const mf    = useModelData(spot.lat, spot.lng, 'MF')
-  const gem   = useModelData(spot.lat, spot.lng, 'GEM')
-
-  const allData: Record<string, DayForecast[]> = {
-    GFS: gfs, ECMWF: ecmwf, ICON: icon, MF: mf, GEM: gem,
-  }
+  // Single batched hook replaces 5 × useForecast — one state update instead of 5
+  const allData = useMultiModelForecast(spot.lat, spot.lng, BASE_MODELS)
 
   // Build chart data: one entry per day with wind per model (memoized)
-  const days = gfs.length || ecmwf.length || icon.length || mf.length || gem.length || 0
-  
   const chartData = useMemo(() => {
-    if (days === 0) return []
+    // Find first model with data to determine day count
+    const firstWithData = BASE_MODELS.find(m => allData[m]?.length > 0)
+    if (!firstWithData) return []
+    const ref = allData[firstWithData]
+    const days = ref.length
+
     return Array.from({ length: days }, (_, i) => {
-      const entry: Record<string, any> = {
-        day: gfs[i]?.day || ecmwf[i]?.day || icon[i]?.day || mf[i]?.day || gem[i]?.day || '',
-      }
+      const entry: Record<string, any> = { day: ref[i]?.day || '' }
       for (const m of visibleModels) {
         const raw = allData[m]?.[i]?.wind
         entry[m] = raw != null ? convertSpeed(raw, su) : null
       }
       return entry
     })
-  }, [days, gfs, ecmwf, icon, mf, gem, visibleModels, su])
+  }, [allData, visibleModels, su])
 
   if (chartData.length === 0) return null
 

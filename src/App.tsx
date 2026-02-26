@@ -8,14 +8,25 @@ import { AddSpotMap }     from './components/AddSpotMap'
 import { SettingsPanel }  from './components/SettingsPanel'
 import { useSpots }       from './hooks/useSpots'
 import { useSettings }    from './hooks/useSettings'
+import { useOnlineStatus } from './hooks/useOnlineStatus'
 import { setStormGlassKey, fetchTideData } from './api/tide'
 import { clearForecastCache } from './api/openmeteo'
 import type { WindModel, Spot } from './types'
 import './styles/global.css'
 
+function formatTimeAgo(date: Date): string {
+  const mins = Math.round((Date.now() - date.getTime()) / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
 export default function App() {
   const { spots, loading, addSpot, removeSpot, reorderSpots } = useSpots()
   const { settings, update: updateSettings } = useSettings()
+  const { online, lastOnline } = useOnlineStatus()
 
   const [selId,        setSelId]        = useState<string | null>(null)
   const [model,        setModel]        = useState<WindModel>('GFS')
@@ -112,6 +123,18 @@ export default function App() {
         onRefresh={handleRefresh}
         refreshing={refreshing}
       />
+
+      {!online && (
+        <div className="offline-banner">
+          <span className="offline-dot" />
+          Offline — showing cached forecast
+          {lastOnline && (
+            <span className="offline-age">
+              {' · '}last updated {formatTimeAgo(lastOnline)}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar

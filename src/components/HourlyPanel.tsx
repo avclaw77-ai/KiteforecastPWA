@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts'
 import { useHourlyForecast } from '../hooks/useHourlyForecast'
-import { dirLabel, convertSpeed, convertHeight, convertTemp, speedLabel, heightLabel, sunTimes } from '../types'
+import { dirLabel, convertSpeed, convertHeight, convertTemp, speedLabel, heightLabel, sunTimes, DAY_NAMES, MONTH_NAMES } from '../types'
 import { tidePeaks as getTidePeaks } from '../api/tide'
 import type { Spot, WindModel, HourForecast, AppSettings } from '../types'
 
@@ -15,9 +15,6 @@ import iconTemp from '../assets/icons/temperature-24.png'
 import iconPrecip from '../assets/icons/precipitation-24.png'
 import iconSunrise from '../assets/icons/sunrise-16.png'
 import iconSunset from '../assets/icons/sunset-16.png'
-
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 // ── Sunrise / Sunset bar ─────────────────────────────────────────────────────
 const SunBar = memo(function SunBar({ lat, lng, dayOffset }: { lat: number; lng: number; dayOffset: number }) {
@@ -179,9 +176,9 @@ function buildSmoothPath(
   return d
 }
 
-const CombinedChart = memo(function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su, hu }: {
+const CombinedChart = memo(function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su }: {
   data: HourForecast[]; windColor: string; dayOffset: number; lat: number; lng: number
-  su: 'kts' | 'mph' | 'km/h'; hu: 'm' | 'ft'
+  su: 'kts' | 'mph' | 'km/h'
 }) {
   const data = useMemo(() => fullData.slice(DAY_START, DAY_END + 1), [fullData])
 
@@ -624,7 +621,7 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, sett
         ) : (
           <>
             {viewMode === 'combined' ? (
-              <CombinedChart data={data} windColor={windColor} dayOffset={dayOffset} lat={spot.lat} lng={spot.lng} su={su} hu={hu} />
+              <CombinedChart data={data} windColor={windColor} dayOffset={dayOffset} lat={spot.lat} lng={spot.lng} su={su} />
             ) : (
               <SplitView data={data} windColor={windColor} isBlend={isBlend} dayOffset={dayOffset} lat={spot.lat} lng={spot.lng} su={su} hu={hu} tu={tu} />
             )}

@@ -1,5 +1,5 @@
 import type { DayForecast, HourForecast, WindModel } from '../types'
-import { BASE_MODELS } from '../types'
+import { BASE_MODELS, DAY_NAMES } from '../types'
 import { tideAt } from './tide'
 
 const KMH_TO_KTS = 0.539957
@@ -25,8 +25,6 @@ const MODEL_WEIGHT: Record<string, number> = {
   MF:    0.85,
   GEM:   0.8,
 }
-
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // ── Cache ────────────────────────────────────────────────────────────────────
 const dailyCache  = new Map<string, { ts: number; data: DayForecast[] }>()
@@ -131,8 +129,11 @@ function blendValues(
   for (const i of useIdx) { sumV += values[i] * weights[i]; sumW += weights[i] }
   const mean = sumV / sumW
 
-  // Spread = full range across ALL models (before trimming)
-  const spread = Math.max(...values) - Math.min(...values)
+  // Spread = range across retained models (after outlier trimming)
+  const usedValues = useIdx.map(i => values[i])
+  const spread = usedValues.length > 1
+    ? Math.max(...usedValues) - Math.min(...usedValues)
+    : 0
 
   // Confidence: based on coefficient of variation (CV)
   // Low spread relative to mean = high confidence
@@ -172,7 +173,8 @@ export async function fetchDailyForecast(
     if (!succeeded.length) throw new Error('All models failed')
 
     const modelNames = succeeded.map(s => s.model)
-    const N = succeeded[0].data.length
+    // Pre-compute weights once (constant for all days)
+    const weights = modelNames.map(m => MODEL_WEIGHT[m] ?? 1.0)
 
     return succeeded[0].data.map((d, i) => {
       const winds  = succeeded.map(s => s.data[i]?.wind ?? 0)
@@ -180,7 +182,6 @@ export async function fetchDailyForecast(
       const temps  = succeeded.map(s => s.data[i]?.temp ?? 0)
       const rains  = succeeded.map(s => s.data[i]?.rain ?? 0)
       const dirs   = succeeded.map(s => s.data[i]?.dirDeg ?? 0)
-      const weights = modelNames.map(m => MODEL_WEIGHT[m] ?? 1.0)
 
       const windBlend = blendValues(winds, modelNames)
       const gustBlend = blendValues(gusts, modelNames)
@@ -283,6 +284,8 @@ export async function fetchHourlyForecast(
     if (!succeeded.length) throw new Error('All models failed')
 
     const modelNames = succeeded.map(s => s.model)
+    // Pre-compute weights once (constant for all hours)
+    const weights = modelNames.map(m => MODEL_WEIGHT[m] ?? 1.0)
 
     return succeeded[0].data.map((h, i) => {
       const winds  = succeeded.map(s => s.data[i]?.wind ?? 0)
@@ -290,7 +293,6 @@ export async function fetchHourlyForecast(
       const temps  = succeeded.map(s => s.data[i]?.temp ?? 0)
       const rains  = succeeded.map(s => s.data[i]?.rain ?? 0)
       const dirs   = succeeded.map(s => s.data[i]?.dirDeg ?? 0)
-      const weights = modelNames.map(m => MODEL_WEIGHT[m] ?? 1.0)
 
       const windBlend = blendValues(winds, modelNames)
       const gustBlend = blendValues(gusts, modelNames)
@@ -354,7 +356,7 @@ export async function fetchHourlyForecast(
       gust:   Math.round((wg[s + i] ?? 0) * KMH_TO_KTS),
       dirDeg: wd[s + i] ?? 0,
       temp:   t2[s + i] ?? 0,
-      rain:   pr[s + i] ?? 0,
+      rain:   Math.round((pr[s + i] ?? 0) * 10) / 10,
       tide:   tideAt(dayOff, i, lat),
     }))
 
@@ -365,6 +367,21 @@ export async function fetchHourlyForecast(
   hourlyInflight.set(k, promise)
   promise.finally(() => hourlyInflight.delete(k))
   return promise
+}
+
+// ── Synchronous cache access (for hooks to skip loading state) ──────────────
+export function getCachedDaily(lat: number, lng: number, model: WindModel): DayForecast[] | null {
+  const k = ck(lat, lng, model, 'd')
+  const hit = dailyCache.get(k)
+  if (hit && Date.now() - hit.ts < CACHE_TTL) return hit.data
+  return null
+}
+
+export function getCachedHourly(lat: number, lng: number, model: WindModel, dayOff: number): HourForecast[] | null {
+  const k = ck(lat, lng, model, 'h', dayOff)
+  const hit = hourlyCache.get(k)
+  if (hit && Date.now() - hit.ts < CACHE_TTL) return hit.data
+  return null
 }
 
 // ── Cache control ────────────────────────────────────────────────────────────
