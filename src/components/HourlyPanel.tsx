@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts'
 import { useHourlyForecast } from '../hooks/useHourlyForecast'
-import { dirLabel, convertSpeed, convertHeight, convertTemp, speedLabel, heightLabel, sunTimes, DAY_NAMES, MONTH_NAMES } from '../types'
+import { dirLabel, convertSpeed, convertHeight, convertTemp, speedLabel, heightLabel, sunTimes, DAY_NAMES, MONTH_NAMES, chartColors } from '../types'
 import { tidePeaks as getTidePeaks } from '../api/tide'
 import type { Spot, WindModel, HourForecast, AppSettings } from '../types'
 
@@ -62,8 +62,8 @@ const WindDirStrip = memo(function WindDirStrip({ data, interval }: { data: Hour
       {data.filter((_, i) => i % step === 0).map((d, i) => (
         <div key={i} className="wind-dir-item">
           <svg width={14} height={14} viewBox="0 0 24 24"
-            style={{ transform: `rotate(${d.dirDeg}deg)` }}>
-            <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="#2563EB" opacity={0.7} />
+            style={{ transform: `rotate(${d.dirDeg}deg)`, color: 'var(--accent)' }}>
+            <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="currentColor" opacity={0.7} />
           </svg>
           <span className="wind-dir-label">{dirLabel(d.dirDeg)}</span>
         </div>
@@ -90,9 +90,10 @@ const Section = memo(function Section({ title, sub, icon, right, children }: {
 })
 
 // ── Hourly tide chart ─────────────────────────────────────────────────────────
-const HourlyTideChart = memo(function HourlyTideChart({ data, dayOnly, dayOffset, lat, hu = 'm' }: {
-  data: HourForecast[]; dayOnly?: boolean; dayOffset: number; lat: number; hu?: 'm' | 'ft'
+const HourlyTideChart = memo(function HourlyTideChart({ data, dayOnly, dayOffset, lat, hu = 'm', dark = false }: {
+  data: HourForecast[]; dayOnly?: boolean; dayOffset: number; lat: number; hu?: 'm' | 'ft'; dark?: boolean
 }) {
+  const cc = chartColors(dark)
   if (!data || data.length === 0) return null
 
   const chartData = useMemo(
@@ -125,10 +126,10 @@ const HourlyTideChart = memo(function HourlyTideChart({ data, dayOnly, dayOffset
               <stop offset="95%" stopColor="#10B981" stopOpacity={0}   />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
-          <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#8A96A8' }}
+          <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} vertical={false} />
+          <XAxis dataKey="hour" tick={{ fontSize: 10, fill: cc.label }}
             axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: '#8A96A8' }} axisLine={false} tickLine={false}
+          <YAxis tick={{ fontSize: 10, fill: cc.label }} axisLine={false} tickLine={false}
             domain={[minL, maxL]} />
           <Tooltip content={<ChartTooltip />} />
           <Area type="monotone" dataKey="tide" stroke="#10B981" strokeWidth={2}
@@ -176,10 +177,11 @@ function buildSmoothPath(
   return d
 }
 
-const CombinedChart = memo(function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su }: {
+const CombinedChart = memo(function CombinedChart({ data: fullData, windColor, dayOffset, lat, lng, su, dark = false }: {
   data: HourForecast[]; windColor: string; dayOffset: number; lat: number; lng: number
-  su: 'kts' | 'mph' | 'km/h'
+  su: 'kts' | 'mph' | 'km/h'; dark?: boolean
 }) {
+  const cc = chartColors(dark)
   const data = useMemo(() => fullData.slice(DAY_START, DAY_END + 1), [fullData])
 
   const allTidePeaks = useMemo(() => getTidePeaks(dayOffset, lat), [dayOffset, lat])
@@ -288,7 +290,7 @@ const CombinedChart = memo(function CombinedChart({ data: fullData, windColor, d
                   preserveAspectRatio="none" viewBox={`0 0 ${SVG_W} ${CHART_H}`}>
                   {yTicks.map((v, i) => (
                     <line key={i} x1="0" x2={SVG_W} y1={yAt(v)} y2={yAt(v)}
-                      stroke="#E8EDF3" strokeWidth={1} strokeDasharray="4 4" />
+                      stroke={cc.grid} strokeWidth={1} strokeDasharray="4 4" />
                   ))}
                   <path d={windFill} fill={windColor} opacity={0.1} />
                   <path d={gustPath} fill="none" stroke="#93C5FD" strokeWidth={2}
@@ -328,8 +330,8 @@ const CombinedChart = memo(function CombinedChart({ data: fullData, windColor, d
                 <td key={i} className="combined-td">
                   {i === 0 && <span className="combined-tr-icon"><img src={iconWind} alt="" className="combined-tr-img" /></span>}
                   <svg width={13} height={13} viewBox="0 0 24 24"
-                    style={{ transform: `rotate(${d.dirDeg}deg)` }}>
-                    <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="#2563EB" opacity={0.7} />
+                    style={{ transform: `rotate(${d.dirDeg}deg)`, color: 'var(--accent)' }}>
+                    <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="currentColor" opacity={0.7} />
                   </svg>
                   <span className="combined-dir">{dirLabel(d.dirDeg)}</span>
                 </td>
@@ -393,10 +395,11 @@ const CombinedChart = memo(function CombinedChart({ data: fullData, windColor, d
 })
 
 // ── Split view ────────────────────────────────────────────────────────────────
-const SplitView = memo(function SplitView({ data, windColor, isBlend, dayOffset, lat, lng, su, hu, tu }: {
+const SplitView = memo(function SplitView({ data, windColor, isBlend, dayOffset, lat, lng, su, hu, tu, dark = false }: {
   data: HourForecast[]; windColor: string; isBlend: boolean; dayOffset: number; lat: number; lng: number
-  su: 'kts' | 'mph' | 'km/h'; hu: 'm' | 'ft'; tu: '°C' | '°F'
+  su: 'kts' | 'mph' | 'km/h'; hu: 'm' | 'ft'; tu: '°C' | '°F'; dark?: boolean
 }) {
+  const cc = chartColors(dark)
   const dayData = useMemo(() => data.slice(6, 20).map(d => ({
     ...d,
     wind: convertSpeed(d.wind, su),
@@ -427,10 +430,10 @@ const SplitView = memo(function SplitView({ data, windColor, isBlend, dayOffset,
                 </linearGradient>
               )}
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
-            <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#8A96A8' }}
+            <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} vertical={false} />
+            <XAxis dataKey="hour" tick={{ fontSize: 10, fill: cc.label }}
               axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: cc.label }} axisLine={false} tickLine={false} />
             <Tooltip content={<ChartTooltip />} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
             {isBlend && data[0]?.spread != null && (
@@ -447,17 +450,17 @@ const SplitView = memo(function SplitView({ data, windColor, isBlend, dayOffset,
       </Section>
 
       {/* Tide — 06:00 to 19:00 */}
-      <HourlyTideChart data={data} dayOnly dayOffset={dayOffset} lat={lat} hu={hu} />
+      <HourlyTideChart data={data} dayOnly dayOffset={dayOffset} lat={lat} hu={hu} dark={dark} />
 
       {/* Temp + Rain — full 24h */}
       <div className="two-col">
         <Section title="Temperature" icon={iconTemp} sub={`${tu} · hourly`}>
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={tempChartData} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
-              <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#8A96A8' }}
+              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} vertical={false} />
+              <XAxis dataKey="hour" tick={{ fontSize: 10, fill: cc.label }}
                 axisLine={false} tickLine={false} interval={5} />
-              <YAxis tick={{ fontSize: 10, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: cc.label }} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip />} />
               <Line type="monotone" dataKey="temp" stroke="#F97316"
                 strokeWidth={2.5} dot={false} name="Temp" />
@@ -468,10 +471,10 @@ const SplitView = memo(function SplitView({ data, windColor, isBlend, dayOffset,
         <Section title="Precipitation" icon={iconPrecip} sub="mm · hourly">
           <ResponsiveContainer width="100%" height={150}>
             <BarChart data={data} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
-              <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#8A96A8' }}
+              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} vertical={false} />
+              <XAxis dataKey="hour" tick={{ fontSize: 10, fill: cc.label }}
                 axisLine={false} tickLine={false} interval={5} />
-              <YAxis tick={{ fontSize: 10, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: cc.label }} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="rain" fill="#38BDF8" radius={[3, 3, 0, 0]} name="Rain" />
             </BarChart>
@@ -567,7 +570,7 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, sett
 
         {/* Header */}
         <div className="modal-header">
-          <button className="modal-back" onClick={onClose}>←</button>
+          <button className="modal-back" onClick={onClose} aria-label="Close">←</button>
 
           {/* Day navigation */}
           <div className="day-nav">
@@ -575,6 +578,7 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, sett
               className="day-nav-btn"
               disabled={dayOffset <= 0}
               onClick={() => onDayChange?.(dayOffset - 1)}
+              aria-label="Previous day"
             >
               ‹
             </button>
@@ -591,6 +595,7 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, sett
               className="day-nav-btn"
               disabled={dayOffset >= 6}
               onClick={() => onDayChange?.(dayOffset + 1)}
+              aria-label="Next day"
             >
               ›
             </button>
@@ -621,9 +626,9 @@ export function HourlyPanel({ spot, model, dayOffset, onClose, onDayChange, sett
         ) : (
           <>
             {viewMode === 'combined' ? (
-              <CombinedChart data={data} windColor={windColor} dayOffset={dayOffset} lat={spot.lat} lng={spot.lng} su={su} />
+              <CombinedChart data={data} windColor={windColor} dayOffset={dayOffset} lat={spot.lat} lng={spot.lng} su={su} dark={settings.darkMode} />
             ) : (
-              <SplitView data={data} windColor={windColor} isBlend={isBlend} dayOffset={dayOffset} lat={spot.lat} lng={spot.lng} su={su} hu={hu} tu={tu} />
+              <SplitView data={data} windColor={windColor} isBlend={isBlend} dayOffset={dayOffset} lat={spot.lat} lng={spot.lng} su={su} hu={hu} tu={tu} dark={settings.darkMode} />
             )}
           </>
         )}

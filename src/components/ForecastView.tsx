@@ -8,14 +8,12 @@ import { useForecast }                       from '../hooks/useForecast'
 import { ModelComparison }                   from './ModelComparison'
 import { windRating, ratingColor, dirLabel,
          convertSpeed, convertTemp,
-         speedLabel }            from '../types'
+         speedLabel, chartColors, MONTH_NAMES } from '../types'
 import type { Spot, WindModel, DayForecast, AppSettings } from '../types'
 
 import iconWind from '../assets/icons/wind_direction-24.png'
 import iconTemp from '../assets/icons/temperature-24.png'
 import iconPrecip from '../assets/icons/precipitation-24.png'
-
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 const ChartTooltip = memo(function ChartTooltip({ active, payload, label }: any) {
@@ -62,8 +60,8 @@ const WindDirStrip = memo(function WindDirStrip({ data, interval }: {
       {data.filter((_, i) => i % step === 0).map((d, i) => (
         <div key={i} className="wind-dir-item">
           <svg width={16} height={16} viewBox="0 0 24 24"
-            style={{ transform: `rotate(${d.dirDeg}deg)` }}>
-            <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="#2563EB" opacity={0.7} />
+            style={{ transform: `rotate(${d.dirDeg}deg)`, color: 'var(--accent)' }}>
+            <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="currentColor" opacity={0.7} />
           </svg>
           <span className="wind-dir-label">{dirLabel(d.dirDeg)}</span>
         </div>
@@ -77,9 +75,9 @@ const WindArrow = memo(function WindArrow({ deg, size = 18 }: { deg: number; siz
   return (
     <svg
       width={size} height={size} viewBox="0 0 24 24"
-      style={{ transform: `rotate(${deg}deg)`, display: 'inline-block' }}
+      style={{ transform: `rotate(${deg}deg)`, display: 'inline-block', color: 'var(--accent)' }}
     >
-      <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="#2563EB" />
+      <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="currentColor" />
     </svg>
   )
 })
@@ -108,7 +106,7 @@ const DayCard = memo(function DayCard({ d, isBlend, onClick, speedUnit = 'kts' }
   const gust = convertSpeed(d.gust, speedUnit)
   const color = ratingColor(windRating(d.wind))
   const dt = d.date ? new Date(d.date + 'T00:00:00') : null
-  const dateLabel = dt ? `${MONTHS[dt.getMonth()]} ${dt.getDate()}` : ''
+  const dateLabel = dt ? `${MONTH_NAMES[dt.getMonth()]} ${dt.getDate()}` : ''
   return (
     <div
       className={['day-card', isBlend ? 'day-card--blend' : ''].join(' ')}
@@ -185,6 +183,7 @@ export function ForecastView({
   const windColor = isBlend ? '#6366F1' : '#2563EB'
   const su = settings.speedUnit
   const tu = settings.tempUnit
+  const cc = chartColors(settings.darkMode)
 
   const windChartData = useMemo(
     () => data.map(d => ({ ...d, wind: convertSpeed(d.wind, su), gust: convertSpeed(d.gust, su) })),
@@ -246,9 +245,9 @@ export function ForecastView({
                     <stop offset="95%" stopColor={windColor} stopOpacity={0}    />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: cc.label }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: cc.label }} axisLine={false} tickLine={false} />
                 <Tooltip content={<WeeklyWindTooltip />} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
                 <Area type="monotone" dataKey="gust" stroke="#93C5FD" strokeWidth={1.5}
@@ -272,9 +271,9 @@ export function ForecastView({
           {loading ? <SkeletonBar h={140} /> : (
             <ResponsiveContainer width="100%" height={140}>
               <LineChart data={tempChartData} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: cc.label }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: cc.label }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Line type="monotone" dataKey="temp" stroke="#F97316" strokeWidth={2.5}
                   dot={{ r: 3, fill: '#F97316', strokeWidth: 0 }} name="Temp" />
@@ -287,9 +286,9 @@ export function ForecastView({
           {loading ? <SkeletonBar h={140} /> : (
             <ResponsiveContainer width="100%" height={140}>
               <BarChart data={data} margin={{ top: 5, right: 10, left: -30, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#8A96A8' }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: cc.label }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: cc.label }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="rain" fill="#38BDF8" radius={[4, 4, 0, 0]} name="Rain" />
               </BarChart>

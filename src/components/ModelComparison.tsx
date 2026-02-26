@@ -4,7 +4,7 @@ import {
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { useMultiModelForecast }             from '../hooks/useMultiModelForecast'
-import { BASE_MODELS, convertSpeed, speedLabel } from '../types'
+import { BASE_MODELS, convertSpeed, speedLabel, chartColors } from '../types'
 import type { Spot, WindModel, AppSettings } from '../types'
 
 // ── Distinct color per model ─────────────────────────────────────────────────
@@ -25,12 +25,14 @@ interface Props {
 }
 
 // ── Chart tooltip (defined outside component for stable reference) ───────────
-const ChartTooltip = memo(function ChartTooltip({ active, payload, label, su }: any) {
+const ChartTooltip = memo(function ChartTooltip({ active, payload, label, su, dark }: any) {
   if (!active || !payload?.length) return null
+  const cc = chartColors(!!dark)
   return (
     <div style={{
-      background: 'white', border: '1px solid #E2E8F0', borderRadius: 8,
+      background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 8,
       padding: '8px 12px', fontSize: 11, boxShadow: '0 2px 8px rgba(0,0,0,.08)',
+      color: cc.tooltipText,
     }}>
       <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
       {payload.map((p: any) => (
@@ -44,6 +46,7 @@ const ChartTooltip = memo(function ChartTooltip({ active, payload, label, su }: 
 
 export const ModelComparison = memo(function ModelComparison({ spot, settings }: Props) {
   const su = settings.speedUnit
+  const cc = chartColors(settings.darkMode)
   const visibleModels = useMemo(
     () => BASE_MODELS.filter(m => settings.enabledModels.includes(m)),
     [settings.enabledModels]
@@ -80,19 +83,19 @@ export const ModelComparison = memo(function ModelComparison({ spot, settings }:
       </div>
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={chartData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} vertical={false} />
           <XAxis
             dataKey="day"
-            tick={{ fontSize: 10, fill: '#8A96A8' }}
+            tick={{ fontSize: 10, fill: cc.label }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: '#8A96A8' }}
+            tick={{ fontSize: 10, fill: cc.label }}
             axisLine={false}
             tickLine={false}
           />
-          <Tooltip content={<ChartTooltip su={su} />} />
+          <Tooltip content={<ChartTooltip su={su} dark={settings.darkMode} />} />
           <Legend
             iconType="line"
             iconSize={14}

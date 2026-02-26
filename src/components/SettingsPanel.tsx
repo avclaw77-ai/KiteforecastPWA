@@ -14,17 +14,8 @@ const ToggleChip = memo(function ToggleChip({ label, active, color, onClick }: {
   return (
     <button
       onClick={onClick}
-      style={{
-        padding:      '6px 14px',
-        borderRadius: 20,
-        border:       active ? '2px solid ' + (color || '#2563EB') : '2px solid #E2E8F0',
-        background:   active ? (color || '#2563EB') + '18' : '#fff',
-        color:        active ? (color || '#2563EB') : '#64748B',
-        fontWeight:   active ? 700 : 500,
-        fontSize:     12,
-        cursor:       'pointer',
-        transition:   'all .15s',
-      }}
+      className={['toggle-chip', active ? 'toggle-chip--active' : ''].join(' ')}
+      style={active && color ? { borderColor: color, color, background: color + '18' } : undefined}
     >
       {label}
     </button>
@@ -42,17 +33,7 @@ function RadioGroup<T extends string>({ options, value, onChange }: {
         <button
           key={o.value}
           onClick={() => onChange(o.value)}
-          style={{
-            padding:      '6px 14px',
-            borderRadius: 20,
-            border:       value === o.value ? '2px solid #2563EB' : '2px solid #E2E8F0',
-            background:   value === o.value ? '#2563EB12' : '#fff',
-            color:        value === o.value ? '#2563EB' : '#64748B',
-            fontWeight:   value === o.value ? 700 : 500,
-            fontSize:     12,
-            cursor:       'pointer',
-            transition:   'all .15s',
-          }}
+          className={['radio-btn', value === o.value ? 'radio-btn--active' : ''].join(' ')}
         >
           {o.label}
         </button>
