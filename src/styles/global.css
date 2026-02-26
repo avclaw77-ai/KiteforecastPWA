@@ -898,6 +898,33 @@ body { background: var(--bg); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Offline banner ────────────────────────────────────────────────────────── */
+.offline-banner {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 6px 16px;
+  background: #FEF3C7; border-bottom: 1px solid #FCD34D;
+  font-size: 11px; font-weight: 600; color: #92400E;
+  animation: offline-slide .3s ease-out;
+}
+[data-theme="dark"] .offline-banner {
+  background: #451A03; border-bottom-color: #78350F; color: #FCD34D;
+}
+.offline-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #F59E0B;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+  animation: offline-pulse 2s ease-in-out infinite;
+}
+.offline-age { font-weight: 400; opacity: 0.75; }
+@keyframes offline-slide {
+  0% { transform: translateY(-100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes offline-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 /* ── Wind quality hours indicator on day cards ──────────────────────────────── */
 .day-card-hours {
   display: flex; gap: 2px; justify-content: center; margin-top: 4px;

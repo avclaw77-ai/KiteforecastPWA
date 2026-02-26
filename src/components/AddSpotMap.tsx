@@ -6,15 +6,10 @@ import { useMapLiveWinds }                          from '../hooks/useMapLiveWin
 import { windRating, ratingColor }                  from '../types'
 import type { Spot }                                from '../types'
 
-const GMAP_KEY = import.meta.env.VITE_GMAP_KEY || 'AIzaSyBl2RUxrzYi3vRhlNf7O3S_asndmMQsIj0'
+import { Toast }                                    from './Toast'
+import { SpotListTab }                              from './SpotListTab'
 
-// ISO country code → full name for search
-const COUNTRY_NAMES: Record<string, string> = {
-  BR: 'Brazil', CA: 'Canada', CV: 'Cape Verde', DO: 'Dominican Republic',
-  EG: 'Egypt', ES: 'Spain', FR: 'France', KE: 'Kenya', LK: 'Sri Lanka',
-  LV: 'Latvia', MA: 'Morocco', PE: 'Peru', PH: 'Philippines', TZ: 'Tanzania',
-  US: 'United States', VN: 'Vietnam', ZA: 'South Africa',
-}
+const GMAP_KEY = import.meta.env.VITE_GMAP_KEY || 'AIzaSyBl2RUxrzYi3vRhlNf7O3S_asndmMQsIj0'
 
 // ── Google Maps loader (singleton) ───────────────────────────────────────────
 const loader = new Loader({ apiKey: GMAP_KEY, version: 'weekly' })
@@ -38,21 +33,6 @@ function circleIcon(color: string, size = 24, opacity = 1): google.maps.Icon {
   }
 }
 
-// ── Toast notification ────────────────────────────────────────────────────────
-function Toast({ message, onDone }: { message: string; onDone: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 2500)
-    return () => clearTimeout(t)
-  }, [onDone])
-
-  return (
-    <div className="add-spot-toast">
-      <span className="add-spot-toast-icon">✓</span>
-      {message}
-    </div>
-  )
-}
-
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface Props {
   mySpotIds: string[]
@@ -63,7 +43,6 @@ interface Props {
 export function AddSpotMap({ mySpotIds, onAdd, onClose }: Props) {
   const liveWinds = useMapLiveWinds()
   const [tab,            setTab]            = useState<'map' | 'list'>('map')
-  const [search,         setSearch]         = useState('')
   const [pending,        setPending]        = useState<{ lat: number; lng: number } | null>(null)
   const [pendingCountry, setPendingCountry] = useState('')
   const [toast,          setToast]          = useState<string | null>(null)
@@ -119,8 +98,8 @@ export function AddSpotMap({ mySpotIds, onAdd, onClose }: Props) {
     if (pinRef.current) { pinRef.current.setMap(null); pinRef.current = null }
   }, [onAdd])
 
-  // ── Add known spot ─────────────────────────────────────────────────────────
-  const handleAddKnown = useCallback((spot: typeof KNOWN_SPOTS[0]) => {
+  // ── Add known spot (shared between map info-window and list tab) ──────────
+  const handleAddKnown = useCallback((spot: Spot) => {
     if (addedIdsRef.current.has(spot.id)) return
     onAdd({ ...spot })
     setAddedIds(prev => new Set(prev).add(spot.id))
@@ -304,22 +283,6 @@ export function AddSpotMap({ mySpotIds, onAdd, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending])
 
-  // ── List helpers ───────────────────────────────────────────────────────────
-  // Normalize: lowercase + strip accents for search matching
-  const norm = (s: string) =>
-    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-
-  const q = norm(search)
-  const filtered = !q ? KNOWN_SPOTS : KNOWN_SPOTS.filter(s => {
-    const countryFull = COUNTRY_NAMES[s.country.toUpperCase()] || ''
-    return (
-      norm(s.name).includes(q)        ||
-      norm(s.country).includes(q)     ||
-      norm(countryFull).includes(q)   ||
-      norm(s.region).includes(q)
-    )
-  })
-
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="add-spot-modal" onClick={e => e.stopPropagation()}>
@@ -373,44 +336,11 @@ export function AddSpotMap({ mySpotIds, onAdd, onClose }: Props) {
 
         {/* List tab */}
         {tab === 'list' && (
-          <div className="spot-list-wrap">
-            <div className="spot-list-search">
-              <span className="spot-list-search-icon">🔍</span>
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search by name, country or region…"
-                className="spot-list-input"
-              />
-            </div>
-            <div className="spot-list">
-              {filtered.map(spot => {
-                const lw      = liveWinds[spot.id] ?? { wind: spot.wind, gust: spot.gust }
-                const color   = ratingColor(windRating(lw.wind))
-                const isAdded = addedIds.has(spot.id)
-                return (
-                  <div
-                    key={spot.id}
-                    className={['spot-list-row', isAdded ? 'spot-list-row--added' : ''].join(' ')}
-                    onClick={() => !isAdded && handleAddKnown(spot)}
-                  >
-                    <div className="spot-list-dot" style={{ background: color }} />
-                    <div className="spot-list-info">
-                      <div className="spot-list-name">{spot.name}</div>
-                      <div className="spot-list-meta">{COUNTRY_NAMES[spot.country.toUpperCase()] || spot.country} · {spot.region}</div>
-                    </div>
-                    <div className="spot-list-wind">
-                      <div style={{ color, fontWeight: 700 }}>{lw.wind}</div>
-                      <div className="spot-list-gust">↑{lw.gust} kts</div>
-                    </div>
-                    {isAdded
-                      ? <span className="spot-list-check">✓</span>
-                      : <span className="spot-list-plus">+</span>}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+          <SpotListTab
+            addedIds={addedIds}
+            liveWinds={liveWinds}
+            onAddKnown={handleAddKnown}
+          />
         )}
       </div>
     </div>
