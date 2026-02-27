@@ -60,7 +60,7 @@ const WindDirStrip = memo(function WindDirStrip({ data, interval }: {
       {data.filter((_, i) => i % step === 0).map((d, i) => (
         <div key={i} className="wind-dir-item">
           <svg width={16} height={16} viewBox="0 0 24 24"
-            style={{ transform: `rotate(${d.dirDeg}deg)`, color: 'var(--accent)' }}>
+            style={{ transform: `rotate(${d.dirDeg + 180}deg)`, color: 'var(--accent)' }}>
             <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="currentColor" opacity={0.7} />
           </svg>
           <span className="wind-dir-label">{dirLabel(d.dirDeg)}</span>
@@ -75,7 +75,7 @@ const WindArrow = memo(function WindArrow({ deg, size = 18 }: { deg: number; siz
   return (
     <svg
       width={size} height={size} viewBox="0 0 24 24"
-      style={{ transform: `rotate(${deg}deg)`, display: 'inline-block', color: 'var(--accent)' }}
+      style={{ transform: `rotate(${deg + 180}deg)`, display: 'inline-block', color: 'var(--accent)' }}
     >
       <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="currentColor" />
     </svg>

@@ -62,7 +62,7 @@ const WindDirStrip = memo(function WindDirStrip({ data, interval }: { data: Hour
       {data.filter((_, i) => i % step === 0).map((d, i) => (
         <div key={i} className="wind-dir-item">
           <svg width={14} height={14} viewBox="0 0 24 24"
-            style={{ transform: `rotate(${d.dirDeg}deg)`, color: 'var(--accent)' }}>
+            style={{ transform: `rotate(${d.dirDeg + 180}deg)`, color: 'var(--accent)' }}>
             <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="currentColor" opacity={0.7} />
           </svg>
           <span className="wind-dir-label">{dirLabel(d.dirDeg)}</span>
@@ -330,7 +330,7 @@ const CombinedChart = memo(function CombinedChart({ data: fullData, windColor, d
                 <td key={i} className="combined-td">
                   {i === 0 && <span className="combined-tr-icon"><img src={iconWind} alt="" className="combined-tr-img" /></span>}
                   <svg width={13} height={13} viewBox="0 0 24 24"
-                    style={{ transform: `rotate(${d.dirDeg}deg)`, color: 'var(--accent)' }}>
+                    style={{ transform: `rotate(${d.dirDeg + 180}deg)`, color: 'var(--accent)' }}>
                     <path d="M12 2 L8 18 L12 14 L16 18 Z" fill="currentColor" opacity={0.7} />
                   </svg>
                   <span className="combined-dir">{dirLabel(d.dirDeg)}</span>
